@@ -82,6 +82,14 @@
         group: false
       notify: Restart app
 
+    - name: Copy helper scripts (demo seed, evaluation)
+      ansible.posix.synchronize:
+        src: "{{ repo_root }}/scripts/"
+        dest: "{{ app_dir }}/scripts/"
+        delete: true
+        owner: false
+        group: false
+
     - name: Copy ward boundaries
       ansible.posix.synchronize:
         src: "{{ repo_root }}/data/"

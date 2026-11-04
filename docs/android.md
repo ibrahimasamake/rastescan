@@ -1,6 +1,11 @@
 # Android app and Google Play internal testing
 
-The Android app is the same React app wrapped with Capacitor (`web/android`). It talks to the CloudFront address.
+The Android app is the same React portal wrapped with Capacitor 8 (`web/android`, target SDK 36). It talks to the
+CloudFront address, so the public pages, reporting with camera and GPS, and the officer dashboard all work in it.
+Officers sign in with their account; the app keeps the session token in memory for that session.
+
+Rebuild it every time the web app changes (`make android` from the repo root does steps 1–3 below), then bump the
+version and upload a new bundle.
 
 ## Build (on a computer with Android Studio)
 ```bash
@@ -19,7 +24,8 @@ To test on a phone first: plug it in with USB debugging on, then **Run ▶** in 
 1. Play Console → Create app → name **RasteScan**, app, free.
 2. Testing → **Internal testing** → Create new release → upload `app-release.aab`.
 3. Testers tab → create a list → add Gmail addresses (team + any judges you know). Copy the **opt-in link**.
-4. App content: privacy policy URL = `https://<your-cloudfront>/privacy.html`; answer data safety
+4. App content: privacy policy URL = `https://<your-cloudfront>/privacy.html` (replace the team email in
+   `web/public/privacy.html` first; the portal also has a privacy page at `#/privacy`); answer data safety
    (collects photos and approximate/precise location, for app functionality; not shared).
 5. Roll out. Testers open the opt-in link on their phone, accept, then install from Play.
 

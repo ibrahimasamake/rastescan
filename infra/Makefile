@@ -1,7 +1,7 @@
 # Run from infra/. Needs: terraform, ansible, aws credentials (aws configure), node 20+.
 TF := terraform -chdir=terraform
 
-.PHONY: up infra deploy url ssh down check
+.PHONY: up infra deploy url ssh down check seed-demo unseed-demo
 
 up: infra deploy ## Create everything on AWS and deploy the app
 
@@ -27,3 +27,11 @@ check: ## Format and lint checks, no AWS needed
 	$(TF) fmt -check -recursive
 	$(TF) init -backend=false -input=false >/dev/null && $(TF) validate
 	cd ansible && ansible-lint site.yml
+
+SERVER_RUN := sudo -u rastescan bash -c 'set -a; . /etc/rastescan.env; cd /opt/rastescan && backend/.venv/bin/python scripts/seed_demo.py
+
+seed-demo: ## Add 40 clearly marked demo reports on the server (refuses if real reports exist)
+	cd ansible && ansible app -b -m ansible.builtin.shell -a "$(SERVER_RUN) --demo'"
+
+unseed-demo: ## Take every demo report off the server again
+	cd ansible && ansible app -b -m ansible.builtin.shell -a "$(SERVER_RUN) --remove'"
