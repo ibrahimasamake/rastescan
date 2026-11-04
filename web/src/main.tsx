@@ -18,6 +18,8 @@ const Wards = lazy(() => import("./pages/Wards"));
 const Queue = lazy(() => import("./officer/Queue"));
 const Review = lazy(() => import("./officer/Review"));
 const Team = lazy(() => import("./officer/Team"));
+const Analytics = lazy(() => import("./officer/Analytics"));
+const WorkOrder = lazy(() => import("./officer/WorkOrder"));
 const Static = {
   About: lazy(() => import("./pages/Static").then((m) => ({ default: m.About }))),
   Privacy: lazy(() => import("./pages/Static").then((m) => ({ default: m.Privacy }))),
@@ -53,6 +55,8 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/officer" element={<Queue />} />
                 <Route path="/officer/review" element={<Review />} />
                 <Route path="/officer/team" element={<Team />} />
+                <Route path="/officer/analytics" element={<Analytics />} />
+                <Route path="/officer/work-order" element={<WorkOrder />} />
                 <Route path="/dashboard" element={<Navigate to="/officer" replace />} />
                 <Route path="*" element={<Static.NotFound />} />
               </Routes>
