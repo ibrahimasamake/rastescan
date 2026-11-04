@@ -1,0 +1,21 @@
+# secrets
+.env
+.env.*
+*.pem
+*.jks
+*.keystore
+# python
+__pycache__/
+.venv/
+*.pyc
+*.db
+# node / web
+node_modules/
+dist/
+web/android/app/build/
+# photos and local data
+test-photos/*.jpg
+test-photos/*.jpeg
+test-photos/*.png
+uploads/
+.DS_Store

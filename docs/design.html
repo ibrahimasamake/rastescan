@@ -1,0 +1,635 @@
+<title>RasteScan Project Design</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single inspection-report column on concrete, with road-marking dashes as section breaks and wide panels for the live preview and diagrams. */
+:root{
+  --bg:#EDEFEF; --surface:#FFFFFF; --sunk:#E3E7E8; --ink:#1C2225; --muted:#586266; --line:#CDD3D5;
+  --marking:#F2B705; --marking-ink:#7A5A00; --on-marking:#1C2225;
+  --low:#2C7A4B; --med:#A86F00; --high:#C9531A; --crit:#B3261E;
+  --low-bg:#E2F1E7; --med-bg:#FBEFD2; --high-bg:#FBE4D8; --crit-bg:#F8DCDA;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14181A; --surface:#1C2225; --sunk:#111416; --ink:#E6EAEB; --muted:#9AA4A8; --line:#2E363A;
+  --marking:#F5C21B; --marking-ink:#F5C21B; --on-marking:#14181A;
+  --low:#5CC489; --med:#E3B23C; --high:#F08A4B; --crit:#F2675E;
+  --low-bg:#17301F; --med-bg:#33290F; --high-bg:#3A2114; --crit-bg:#3D1715;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14181A; --surface:#1C2225; --sunk:#111416; --ink:#E6EAEB; --muted:#9AA4A8; --line:#2E363A;
+  --marking:#F5C21B; --marking-ink:#F5C21B; --on-marking:#14181A;
+  --low:#5CC489; --med:#E3B23C; --high:#F08A4B; --crit:#F2675E;
+  --low-bg:#17301F; --med-bg:#33290F; --high-bg:#3A2114; --crit-bg:#3D1715;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 15.5px/1.6 var(--body)}
+.wrap{max-width:1040px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 72px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);line-height:1.05;margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:clamp(56px,10vw,96px);font-weight:800;text-transform:uppercase}
+h2{font-size:clamp(30px,4.4vw,40px);font-weight:700;text-transform:uppercase}
+h3{font-size:22px;font-weight:700}
+p{margin:0;max-width:68ch}
+.eyebrow{font:600 12px/1.3 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:19px;line-height:1.5;max-width:58ch}
+.muted{color:var(--muted)}
+code,.mono{font-family:var(--mono);font-size:.9em}
+section{display:flex;flex-direction:column;gap:20px}
+.sec-head{display:flex;flex-direction:column;gap:8px}
+.dashes{height:6px;background:repeating-linear-gradient(90deg,var(--marking) 0 48px,transparent 48px 84px);border-radius:1px}
+
+/* hero */
+.hero{display:flex;flex-direction:column;gap:18px}
+.hero h1 .y{background:var(--marking);color:var(--on-marking);padding:0 .12em}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-top:8px}
+.fact{background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.fact b{font-weight:600}
+.fact span{font-size:13px;color:var(--muted)}
+
+/* roles */
+.cols3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.cols2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.cols2>*,.cols3>*{min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:8px}
+.panel p{font-size:14.5px}
+
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;border:1px solid var(--line);background:var(--surface)}
+.step{padding:16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px;min-width:0}
+.step .n{font:800 30px/1 var(--display);color:var(--marking-ink)}
+.step b{font-weight:600}
+.step p{font-size:13.5px;color:var(--muted)}
+
+/* architecture svg */
+.scroll{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+.arch{display:block;min-width:760px;width:100%;height:auto}
+.arch .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.arch .lane{fill:var(--sunk)}
+.arch .ai{fill:var(--marking);stroke:none}
+.arch text{fill:var(--ink);font-family:var(--body);font-size:13px}
+.arch .t-ai{fill:var(--on-marking)}
+.arch .lbl{fill:var(--muted);font-size:11px;letter-spacing:.1em;font-weight:600}
+.arch .sm{fill:var(--muted);font-size:11.5px}
+.arch .sm-ai{fill:var(--on-marking);font-size:11.5px;opacity:.8}
+.arch .ln{stroke:var(--muted);stroke-width:1.5;fill:none}
+.arch .dash{stroke-dasharray:5 4}
+.arch .head{fill:var(--muted)}
+
+/* preview */
+.preview{display:grid;grid-template-columns:minmax(260px,330px) 1fr;gap:20px;align-items:start}
+@media (max-width:760px){.preview{grid-template-columns:1fr}}
+.preview>*{min-width:0}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tab{font:600 13px/1 var(--body);padding:9px 14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;border-radius:999px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab:focus-visible,button:focus-visible{outline:3px solid var(--marking);outline-offset:2px}
+.phone{background:var(--ink);padding:10px;border-radius:30px;max-width:330px;width:100%}
+.screen{background:var(--surface);border-radius:22px;overflow:hidden;display:flex;flex-direction:column}
+.appbar{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;font:700 17px/1 var(--display);letter-spacing:.04em;text-transform:uppercase}
+.appbar span{font:500 11px/1 var(--body);color:var(--muted);text-transform:none;letter-spacing:0}
+canvas{display:block;width:100%;aspect-ratio:4/3;max-width:100%}
+.result{padding:14px;display:flex;flex-direction:column;gap:10px}
+.rrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.rtype{font:700 24px/1 var(--display);text-transform:uppercase}
+.chip{font:600 11.5px/1 var(--body);letter-spacing:.06em;padding:6px 9px;border-radius:4px;text-transform:uppercase;white-space:nowrap}
+.c-LOW{background:var(--low-bg);color:var(--low)} .c-MEDIUM{background:var(--med-bg);color:var(--med)}
+.c-HIGH{background:var(--high-bg);color:var(--high)} .c-CRITICAL{background:var(--crit-bg);color:var(--crit)}
+.meter{height:8px;background:var(--sunk);border-radius:4px;position:relative;overflow:hidden}
+.meter i{position:absolute;inset:0 auto 0 0;border-radius:4px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-variant-numeric:tabular-nums}
+.rec{font-size:13px;background:var(--sunk);padding:10px;border-left:3px solid var(--marking)}
+.cta{font:600 14px/1 var(--body);background:var(--marking);color:var(--on-marking);border:0;padding:13px;border-radius:10px;text-align:center}
+pre.json{margin:0;background:var(--sunk);border:1px solid var(--line);padding:16px;overflow-x:auto;font:400 12.5px/1.55 var(--mono);color:var(--ink)}
+.json .k{color:var(--muted)} .json .s{color:var(--marking-ink)} .json .n{color:var(--high)}
+.note{font-size:13px;color:var(--muted)}
+.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.checks li{display:flex;gap:8px;align-items:flex-start}
+.checks li::before{content:"";flex:none;width:8px;height:8px;margin-top:7px;background:var(--marking)}
+
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 11.5px/1.3 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--sunk)}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.sev-stripe{border-left:4px solid}
+.s-LOW{border-color:var(--low)} .s-MEDIUM{border-color:var(--med)} .s-HIGH{border-color:var(--high)} .s-CRITICAL{border-color:var(--crit)}
+
+/* dashboard mock */
+.dash{border:1px solid var(--line);background:var(--surface);display:grid;grid-template-columns:1.45fr 1fr}
+@media (max-width:760px){.dash{grid-template-columns:1fr}}
+.dash>*{min-width:0}
+.dash-top{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.dash-top b{font:700 18px/1 var(--display);text-transform:uppercase;letter-spacing:.04em}
+.counts{display:flex;gap:8px;flex-wrap:wrap}
+.queue{display:flex;flex-direction:column}
+.qi{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.qi:last-child{border-bottom:0}
+.score{font:800 26px/1 var(--display);font-variant-numeric:tabular-nums}
+.qi .t{font-weight:600;font-size:14px} .qi .m{font-size:12.5px;color:var(--muted)}
+.map{position:relative;min-height:300px;background:var(--sunk);border-left:1px solid var(--line);overflow:hidden}
+@media (max-width:760px){.map{border-left:0;border-top:1px solid var(--line)}}
+.map svg{position:absolute;inset:0;width:100%;height:100%}
+.map .road{stroke:var(--line);fill:none}
+.map .pin{stroke:var(--surface);stroke-width:2}
+
+/* timeline */
+.timeline{display:flex;flex-direction:column;border-left:2px dashed var(--marking);margin-left:6px}
+.tl{display:grid;grid-template-columns:70px 1fr;gap:14px;padding:0 0 14px 18px;position:relative}
+.tl::before{content:"";position:absolute;left:-7px;top:6px;width:12px;height:12px;background:var(--marking);border-radius:50%}
+.tl .when{font:600 13px/1.6 var(--mono);color:var(--muted)}
+.tl p{font-size:14.5px}
+
+.build{list-style:none;margin:0;padding:0;counter-reset:b;display:flex;flex-direction:column;border:1px solid var(--line);background:var(--surface)}
+.build li{counter-increment:b;display:grid;grid-template-columns:44px 1fr auto;gap:14px;padding:14px 16px;border-bottom:1px solid var(--line);align-items:start}
+.build li:last-child{border-bottom:0}
+.build li::before{content:counter(b);font:800 28px/1 var(--display);color:var(--marking-ink)}
+.build li>div{min-width:0;display:flex;flex-direction:column;gap:2px}
+.build b{font-weight:600}
+.build p{font-size:13.5px;color:var(--muted)}
+.tag{font:600 11px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;padding:5px 8px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;border-radius:4px}
+.tag.must{background:var(--marking);color:var(--on-marking);border-color:var(--marking)}
+@media (max-width:520px){.build li{grid-template-columns:34px 1fr}.build .tag{grid-column:2;justify-self:start}}
+
+.pitch{background:var(--ink);color:var(--bg);padding:28px;display:flex;flex-direction:column;gap:10px}
+.pitch q{font:700 clamp(24px,3.6vw,34px)/1.15 var(--display);quotes:none;text-wrap:balance}
+.pitch span{font-size:13px;opacity:.75}
+ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14.5px}
+@media (prefers-reduced-motion:no-preference){.tab{transition:background .15s,color .15s}}
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">TechKubik National Level Project Expo 2026 · HKBK College of Engineering, Bengaluru</div>
+  <h1>Raste<span class="y">Scan</span></h1>
+  <p class="lede">Photo in, repair ticket out. An AI road inspector that turns a citizen's photo of a damaged road into a classified, scored and located repair job, ranked so the most dangerous spot gets fixed first.</p>
+  <div class="facts">
+    <div class="fact"><b>5 &amp; 6 November 2026</b><span>From 9:00 AM</span></div>
+    <div class="fact"><b>ISE &amp; CSE Seminar Hall</b><span>In-person, bring your own laptop</span></div>
+    <div class="fact"><b>Track</b><span>AI · Computer vision · Smart city</span></div>
+    <div class="fact"><b>Team of 2–4</b><span>Working model required for judging</span></div>
+  </div>
+</header>
+
+<div class="dashes" role="presentation"></div>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">Problem</div><h2>Complaints arrive. Triage doesn't.</h2></div>
+  <p>Road damage in a city like Bengaluru gets reported as a photo on WhatsApp, a social post or a call to the ward office. Someone then has to look at each one, decide what it is, how dangerous it is and who should go. An open manhole and a hairline crack sit in the same pile. RasteScan does that first look automatically and consistently, so engineers spend their time on repairs instead of sorting.</p>
+  <div class="cols3">
+    <div class="panel"><h3>Citizen</h3><p>Takes a photo, the phone adds GPS, sends. Gets a ticket number and sees when it is fixed.</p></div>
+    <div class="panel"><h3>Ward engineer</h3><p>Sees one queue sorted by danger, with duplicates merged and the damage boxed on every photo.</p></div>
+    <div class="panel"><h3>Field crew</h3><p>Gets the exact repair method, estimated hours and a map pin. Uploads an after photo to close the job.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">How it works</div><h2>Six steps from photo to fix</h2></div>
+  <div class="pipe">
+    <div class="step"><span class="n">1</span><b>Capture</b><p>Phone camera or upload. GPS from the browser or photo EXIF.</p></div>
+    <div class="step"><span class="n">2</span><b>Prepare</b><p>Resize to 1024 px, fix rotation, blur faces and number plates.</p></div>
+    <div class="step"><span class="n">3</span><b>Inspect</b><p>Vision model runs the inspection prompt and returns strict JSON.</p></div>
+    <div class="step"><span class="n">4</span><b>Verify</b><p>Server checks the JSON against the schema and the severity rules.</p></div>
+    <div class="step"><span class="n">5</span><b>Triage</b><p>Merge reports within 15 m, rank by urgency, severity and report count.</p></div>
+    <div class="step"><span class="n">6</span><b>Dispatch</b><p>Crew gets the job; an after photo is re-inspected to confirm the fix.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">Architecture</div><h2>System design</h2>
+  <p class="muted">The AI is one replaceable box. Everything around it is plain, testable code, which is what keeps the demo reliable.</p></div>
+  <div class="scroll">
+  <svg class="arch" viewBox="0 0 980 400" role="img" aria-label="Architecture: citizen app and authority dashboard talk to a FastAPI backend, which calls the vision model, a validator, and a SQLite database with an image store; an optional local YOLO model is the offline fallback.">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+    <rect class="lane" x="10" y="10" width="200" height="380"/>
+    <rect class="lane" x="250" y="10" width="220" height="380"/>
+    <rect class="lane" x="510" y="10" width="240" height="380"/>
+    <rect class="lane" x="790" y="10" width="180" height="380"/>
+    <text class="lbl" x="24" y="36">CLIENTS</text>
+    <text class="lbl" x="264" y="36">BACKEND</text>
+    <text class="lbl" x="524" y="36">AI LAYER</text>
+    <text class="lbl" x="804" y="36">DATA</text>
+
+    <rect class="box" x="26" y="60" width="168" height="80"/>
+    <text x="40" y="88" font-weight="600">Citizen app</text>
+    <text class="sm" x="40" y="108">Web + Android (Play test)</text>
+    <text class="sm" x="40" y="126">Result card + ticket</text>
+
+    <rect class="box" x="26" y="240" width="168" height="96"/>
+    <text x="40" y="268" font-weight="600">Authority dashboard</text>
+    <text class="sm" x="40" y="288">Priority queue</text>
+    <text class="sm" x="40" y="306">Map of open tickets</text>
+    <text class="sm" x="40" y="324">Assign, close, verify</text>
+
+    <rect class="box" x="266" y="60" width="188" height="276"/>
+    <text x="280" y="88" font-weight="600">FastAPI service</text>
+    <text class="sm" x="280" y="114">POST /reports</text>
+    <text class="sm" x="280" y="134">GET  /queue</text>
+    <text class="sm" x="280" y="154">PATCH /reports/{id}</text>
+    <text class="sm" x="280" y="186">Image prep (Pillow)</text>
+    <text class="sm" x="280" y="206">Privacy blur</text>
+    <text class="sm" x="280" y="238">Validator + rules</text>
+    <text class="sm" x="280" y="258">Dedupe within 15 m</text>
+    <text class="sm" x="280" y="278">Priority score</text>
+    <text class="sm" x="280" y="310">Result cache (demo set)</text>
+
+    <rect class="ai" x="526" y="60" width="208" height="120"/>
+    <text class="t-ai" x="540" y="88" font-weight="600">Amazon Bedrock (Nova)</text>
+    <text class="sm-ai" x="540" y="110">Inspection prompt</text>
+    <text class="sm-ai" x="540" y="128">JSON output mode</text>
+    <text class="sm-ai" x="540" y="146">Temperature 0</text>
+    <text class="sm-ai" x="540" y="164">One retry on bad JSON</text>
+
+    <rect class="box" x="526" y="230" width="208" height="106" stroke-dasharray="6 4"/>
+    <text x="540" y="258" font-weight="600">Offline fallback</text>
+    <text class="sm" x="540" y="278">YOLOv8n trained on RDD2022</text>
+    <text class="sm" x="540" y="296">Boxes + class, runs on laptop</text>
+    <text class="sm" x="540" y="314">Rule table fills severity</text>
+
+    <rect class="box" x="806" y="60" width="148" height="100"/>
+    <text x="820" y="88" font-weight="600">SQLite</text>
+    <text class="sm" x="820" y="108">reports, tickets</text>
+    <text class="sm" x="820" y="126">PostGIS later</text>
+
+    <rect class="box" x="806" y="236" width="148" height="100"/>
+    <text x="820" y="264" font-weight="600">Image store</text>
+    <text class="sm" x="820" y="284">Before / after</text>
+    <text class="sm" x="820" y="302">S3 bucket</text>
+
+    <path class="ln" d="M194,100 H266" marker-end="url(#ah)"/>
+    <path class="ln" d="M266,290 H194" marker-end="url(#ah)"/>
+    <path class="ln" d="M454,110 H526" marker-end="url(#ah)"/>
+    <path class="ln" d="M526,140 H454" marker-end="url(#ah)"/>
+    <path class="ln dash" d="M454,280 H526" marker-end="url(#ah)"/>
+    <path class="ln" d="M770,200 V110 H806" marker-end="url(#ah)"/>
+    <path class="ln" d="M454,200 H770" />
+    <path class="ln" d="M770,200 V286 H806" marker-end="url(#ah)"/>
+  </svg>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">The AI contract</div><h2>What the inspector returns</h2>
+  <p class="muted">Pick a sample. The phone screen is drawn from the JSON on the right, including the box. These are illustrative outputs for the design, not measured results.</p></div>
+  <div class="tabs" role="tablist" aria-label="Sample reports">
+    <button class="tab" role="tab" id="tab-pothole" aria-selected="true" data-s="pothole">Pothole</button>
+    <button class="tab" role="tab" id="tab-manhole" aria-selected="false" data-s="manhole">Open manhole</button>
+    <button class="tab" role="tab" id="tab-none" aria-selected="false" data-s="none">Normal road</button>
+  </div>
+  <div class="preview">
+    <div class="phone"><div class="screen">
+      <div class="appbar">RasteScan <span id="ticket">Ticket RS-0142</span></div>
+      <canvas id="cv" width="640" height="480" aria-label="Road photo with detected damage boxed"></canvas>
+      <div class="result">
+        <div class="rrow"><span class="rtype" id="r-type">Pothole</span><span class="chip" id="r-urg">HIGH</span></div>
+        <div class="rrow" style="font-size:13px"><span class="muted">Severity</span><b id="r-sev" style="font-variant-numeric:tabular-nums">7.6 / 10</b></div>
+        <div class="meter"><i id="r-bar"></i></div>
+        <dl class="kv">
+          <dt>Confidence</dt><dd id="r-conf">91%</dd>
+          <dt>Size</dt><dd id="r-size">about 65 cm wide, deep</dd>
+          <dt>Repair time</dt><dd id="r-hrs">about 3 hours</dd>
+          <dt>Fix within</dt><dd id="r-sla">48 hours</dd>
+        </dl>
+        <div class="rec" id="r-rec"></div>
+        <div class="cta">Send to ward office</div>
+      </div>
+    </div></div>
+    <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <pre class="json" id="json" aria-label="Model output JSON"></pre>
+      <div class="panel">
+        <h3>Server checks before anything is saved</h3>
+        <ul class="checks">
+          <li>Strip stray code fences, parse strictly, retry once with a "valid JSON only" reminder.</li>
+          <li>Every enum value must match the schema exactly; otherwise the report goes to manual review.</li>
+          <li>Urgency is recomputed from the severity score bands. If the model disagrees, the server wins and the mismatch is logged.</li>
+          <li>Open manhole is always CRITICAL, whatever the score.</li>
+          <li>Box must satisfy 0 ≤ ymin &lt; ymax ≤ 1000 and 0 ≤ xmin &lt; xmax ≤ 1000. For "None", the box is ignored.</li>
+          <li>Confidence below 0.6 sends the report to a human instead of the queue.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">Triage rules</div><h2>Severity to action</h2></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Score</th><th>Urgency</th><th>Fix within</th><th>Typical case</th><th>Default repair</th></tr></thead>
+    <tbody>
+      <tr><td class="num sev-stripe s-LOW">1.0 – 3.9</td><td><span class="chip c-LOW">Low</span></td><td>Quarterly ward round</td><td>Hairline cracks, ravelling</td><td>Crack sealing with bitumen emulsion</td></tr>
+      <tr><td class="num sev-stripe s-MEDIUM">4.0 – 6.9</td><td><span class="chip c-MEDIUM">Medium</span></td><td>7 days</td><td>Pothole under 5 cm, rutting</td><td>Cold-mix patch and tamper compaction</td></tr>
+      <tr><td class="num sev-stripe s-HIGH">7.0 – 8.9</td><td><span class="chip c-HIGH">High</span></td><td>48 hours</td><td>Pothole 5–10 cm, crumbling edges</td><td>Saw-cut, tack coat, hot-mix patch, roller</td></tr>
+      <tr><td class="num sev-stripe s-CRITICAL">9.0 – 10.0</td><td><span class="chip c-CRITICAL">Critical</span></td><td>12–24 hours</td><td>Open manhole, crater over 10 cm, hidden pit under water</td><td>Barricade now, then cover replacement or full-depth repair</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Queue order: urgency first, then severity score, then number of merged reports, then age. A spot reported by five people rises above an identical spot reported once.</p>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">Screens</div><h2>Ward engineer's dashboard</h2>
+  <p class="muted">Sample data for the mock-up. Locations are roads around the college so the judges recognise them.</p></div>
+  <div class="dash">
+    <div class="dash-top"><b>Open tickets · Nagawara ward</b>
+      <div class="counts"><span class="chip c-CRITICAL">1 critical</span><span class="chip c-HIGH">2 high</span><span class="chip c-MEDIUM">1 medium</span><span class="chip c-LOW">1 low</span></div></div>
+    <div class="queue">
+      <div class="qi sev-stripe s-CRITICAL"><span class="score" style="color:var(--crit)">9.6</span><div><div class="t">Open manhole · Thanisandra Main Road</div><div class="m">3 reports merged · 40 min ago</div></div><span class="chip c-CRITICAL">Critical</span></div>
+      <div class="qi sev-stripe s-HIGH"><span class="score" style="color:var(--high)">7.6</span><div><div class="t">Pothole · Outer Ring Road service lane</div><div class="m">5 reports merged · 2 h ago</div></div><span class="chip c-HIGH">High</span></div>
+      <div class="qi sev-stripe s-HIGH"><span class="score" style="color:var(--high)">7.1</span><div><div class="t">Waterlogging · Hennur Road underpass</div><div class="m">2 reports merged · 3 h ago</div></div><span class="chip c-HIGH">High</span></div>
+      <div class="qi sev-stripe s-MEDIUM"><span class="score" style="color:var(--med)">4.3</span><div><div class="t">Road fissure · Manyata Tech Park gate</div><div class="m">1 report · yesterday</div></div><span class="chip c-MEDIUM">Medium</span></div>
+      <div class="qi sev-stripe s-LOW"><span class="score" style="color:var(--low)">2.8</span><div><div class="t">Debris · loose gravel, Kogilu Cross</div><div class="m">1 report · 2 days ago</div></div><span class="chip c-LOW">Low</span></div>
+    </div>
+    <div class="map" aria-label="Map of open tickets">
+      <svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice">
+        <path class="road" stroke-width="10" d="M-10,210 C80,190 160,120 310,90"/>
+        <path class="road" stroke-width="6" d="M120,-10 C130,90 140,200 150,310"/>
+        <path class="road" stroke-width="4" d="M-10,60 C90,80 200,60 310,170"/>
+        <path class="road" stroke-width="4" d="M40,310 C70,240 200,240 260,-10"/>
+        <circle class="pin" cx="135" cy="96" r="11" fill="var(--crit)"/>
+        <circle class="pin" cx="60" cy="196" r="9" fill="var(--high)"/>
+        <circle class="pin" cx="232" cy="110" r="9" fill="var(--high)"/>
+        <circle class="pin" cx="190" cy="230" r="7" fill="var(--med)"/>
+        <circle class="pin" cx="250" cy="40" r="6" fill="var(--low)"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">Data model</div><h2>One table does the job</h2></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>id</code></td><td>text</td><td>Ticket code, e.g. RS-0142</td></tr>
+      <tr><td><code>lat</code>, <code>lng</code></td><td>real</td><td>From browser GPS or photo EXIF</td></tr>
+      <tr><td><code>photo_path</code>, <code>after_photo_path</code></td><td>text</td><td>Blurred copies only</td></tr>
+      <tr><td><code>ai_json</code></td><td>json</td><td>Raw model output, kept for audit and evaluation</td></tr>
+      <tr><td><code>hazard_type</code>, <code>severity</code>, <code>urgency</code></td><td>text, real, text</td><td>Validated values, urgency recomputed by server</td></tr>
+      <tr><td><code>parent_id</code></td><td>text</td><td>Set when merged into an earlier report within 15 m</td></tr>
+      <tr><td><code>status</code></td><td>text</td><td>new → review → assigned → fixed → verified</td></tr>
+      <tr><td><code>created_at</code>, <code>due_at</code></td><td>datetime</td><td>due_at = created_at + SLA for the urgency</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">Tech stack</div><h2>Chosen for a student team and a laptop demo</h2></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Layer</th><th>Choice</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Frontend</td><td>React + Vite web app, wrapped with Capacitor for Android</td><td>One codebase for the web link, the Play test app and the dashboard</td></tr>
+      <tr><td>Map</td><td>Leaflet + OpenStreetMap</td><td>Free, no API key</td></tr>
+      <tr><td>Backend</td><td>Python FastAPI + Pydantic</td><td>Pydantic models mirror the JSON schema, so validation is a few lines</td></tr>
+      <tr><td>AI in the app</td><td>Amazon Nova on Bedrock (Nova Pro; compare Nova Lite on your test set)</td><td>Reads photos and returns the JSON; Amazon's own model, billed to the same AWS account and credit</td></tr>
+      <tr><td>Dev tooling</td><td>Claude Code</td><td>Used by the team to write the code; not part of the running app</td></tr>
+      <tr><td>Offline model</td><td>YOLOv8n fine-tuned on RDD2022</td><td>Public road-damage dataset that includes Indian roads; runs on CPU</td></tr>
+      <tr><td>Hosting</td><td>One EC2 instance behind CloudFront, photos in S3</td><td>Free HTTPS link, which phone browsers need for camera and GPS</td></tr>
+      <tr><td>Database</td><td>SQLite on the EC2 disk</td><td>Zero setup and no monthly database bill; PostGIS when it scales</td></tr>
+      <tr><td>Privacy</td><td>OpenCV face and plate blur</td><td>Citizen photos contain people and vehicles</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">Hosting</div><h2>AWS on a $50 credit</h2>
+  <p class="muted">One small server, no managed extras. The jury opens an HTTPS link or the Play test app; both talk to the same backend.</p></div>
+  <div class="cols2">
+    <div class="panel">
+      <h3>What runs where</h3>
+      <ul class="checks">
+        <li><b>CloudFront</b> gives a free <code>https://…cloudfront.net</code> address. No domain needed. Browsers only allow camera and GPS on HTTPS.</li>
+        <li><b>EC2 t4g.small</b> (Ubuntu, ARM) runs FastAPI with uvicorn and serves the built React files. SQLite lives on its 20 GB disk.</li>
+        <li><b>S3</b> bucket stores blurred photos. Private; the API hands out short-lived links.</li>
+        <li><b>Bedrock</b> runs the inspection prompt. The server calls it with its IAM role, so no AWS keys sit in the app or the repo.</li>
+        <li>Security group lets port 80 in only from CloudFront's address list, and SSH only from your IP.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Keep the credit safe</h3>
+      <ul class="checks">
+        <li>Set AWS Budgets alerts at $10, $25 and $40 before launching anything.</li>
+        <li>Do not create a NAT gateway, load balancer, RDS database or SageMaker endpoint. Each one alone can eat most of the credit in a month.</li>
+        <li>Limit uploads to 8 MB and 30 reports per device per hour, so a public link cannot run up the model bill.</li>
+        <li>Stop the instance after the expo; delete it when you are done.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Item</th><th>Rough cost</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>EC2 t4g.small, running all month</td><td class="num">about $12</td><td>Smaller than this struggles once OpenCV is installed</td></tr>
+      <tr><td>Public IPv4 address</td><td class="num">about $3.60</td><td>AWS bills every public IPv4 address by the hour</td></tr>
+      <tr><td>20 GB disk (gp3)</td><td class="num">about $1.60</td><td></td></tr>
+      <tr><td>S3 and CloudFront</td><td class="num">under $1</td><td>A few thousand photos; CloudFront has a free monthly allowance</td></tr>
+      <tr><td>Bedrock Nova, 500 photos</td><td class="num">about $1</td><td>A fraction of a cent per photo; Nova Lite is cheaper still</td></tr>
+      <tr><td><b>First month</b></td><td class="num"><b>about $20</b></td><td>Under half the credit; leaves room for testing and mistakes</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Estimates from on-demand list prices; Check the AWS pricing calculator for your region, and confirm your credit covers Bedrock models before relying on it.</p>
+
+  <div class="cols2">
+    <div class="panel">
+      <h3>Android app on Google Play</h3>
+      <ul class="checks">
+        <li>Wrap the same React app with Capacitor; add the Camera and Geolocation plugins. It calls the CloudFront address.</li>
+        <li>Upload a signed app bundle to the <b>internal testing</b> track. It skips the full review, so it is usually installable within minutes to a few hours.</li>
+        <li>Testers are added by Gmail address (up to 100), open the opt-in link, then install from Play.</li>
+        <li>Play Console asks for a privacy policy link because the app uses camera and location. Host a short one at <code>/privacy</code> on the same CloudFront address.</li>
+        <li>Skip closed and open testing for this event: they go through review and can take days.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>How the jury gets in</h3>
+      <ul class="checks">
+        <li><b>Fastest:</b> a printed QR code that opens the web app. Works on any phone, iPhone included, with nothing to install.</li>
+        <li><b>Hand-over phone:</b> one or two team phones with the Play test app already installed and signed in.</li>
+        <li><b>Their own Android:</b> take a judge's Gmail at the stall, add it to the tester list, share the opt-in link. Can take a while to take effect, so offer it, don't depend on it.</li>
+        <li>Dashboard on the laptop screen beside them, so each judge sees their report land in the queue.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">Build order</div><h2>Demo-critical work first</h2>
+  <p class="muted">Each step leaves you with something that runs. If time runs out, stop after step 4 and you still have a working model to show.</p></div>
+  <ol class="build">
+    <li><div><b>Prompt and validator on 30 photos</b><p>A Python script that sends each test photo with the inspection prompt, validates the JSON and writes a CSV. This proves the core idea.</p></div><span class="tag must">Must</span></li>
+    <li><div><b>POST /reports endpoint</b><p>Upload, resize, blur, call the model, validate, save to SQLite. Cache results for the demo set.</p></div><span class="tag must">Must</span></li>
+    <li><div><b>Citizen screen</b><p>Camera or file input, GPS, result card with the box drawn from the JSON.</p></div><span class="tag must">Must</span></li>
+    <li><div><b>Dashboard queue</b><p>Sorted list with severity chips and status buttons.</p></div><span class="tag must">Must</span></li>
+    <li><div><b>Map and duplicate merge</b><p>Leaflet pins; merge reports within 15 m of the same type.</p></div><span class="tag">Should</span></li>
+    <li><div><b>Evaluation sheet</b><p>Hand-label the 30 photos, compare with model output, print the table for the stall.</p></div><span class="tag">Should</span></li>
+    <li><div><b>Offline YOLO fallback</b><p>Train YOLOv8n on RDD2022 and switch to it when there is no network.</p></div><span class="tag">Stretch</span></li>
+    <li><div><b>After-photo verification</b><p>Re-inspect the repaired spot; close the ticket only if the model returns "None" or LOW.</p></div><span class="tag">Stretch</span></li>
+  </ol>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">Team</div><h2>Roles for four people</h2></div>
+  <div class="cols2" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    <div class="panel"><h3>AI lead</h3><p>Prompt, validator, test set of 30 labelled photos, evaluation table, optional YOLO model.</p></div>
+    <div class="panel"><h3>Backend</h3><p>FastAPI routes, image prep and blur, SQLite, dedupe and priority score, result cache.</p></div>
+    <div class="panel"><h3>Frontend</h3><p>Citizen screen, dashboard queue, map, box overlay, phone-friendly layout.</p></div>
+    <div class="panel"><h3>Demo and presentation</h3><p>Collects real photos around campus, makes the poster and slides, rehearses the 3-minute demo, owns the backup plan.</p></div>
+  </div>
+  <p class="note">With two or three members, merge Backend with AI lead, and Frontend with Demo.</p>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">At the stall</div><h2>Three-minute demo</h2></div>
+  <div class="cols2">
+    <div class="timeline">
+      <div class="tl"><span class="when">0:00</span><p>One photo of a real pothole near campus. "Who decides this gets fixed first?"</p></div>
+      <div class="tl"><span class="when">0:20</span><p>Judge picks a photo from the printed set. Upload from the phone; the result card appears with the box.</p></div>
+      <div class="tl"><span class="when">1:00</span><p>Upload the open manhole. It lands at the top of the dashboard as CRITICAL.</p></div>
+      <div class="tl"><span class="when">1:30</span><p>Upload a clean road. It returns "None": the system does not raise false alarms on good roads.</p></div>
+      <div class="tl"><span class="when">2:00</span><p>Upload the same pothole from a second angle. It merges into the first ticket and the count goes up.</p></div>
+      <div class="tl"><span class="when">2:30</span><p>Show the evaluation table and the limits. Close with the pitch line.</p></div>
+    </div>
+    <div class="panel">
+      <h3>Backup plan</h3>
+      <ul class="plain">
+        <li>Bring a phone hotspot; do not rely on hall Wi-Fi.</li>
+        <li>Demo photos have cached results, so the flow works even if the API is slow.</li>
+        <li>Offline YOLO model as the last resort if built.</li>
+        <li>Keep a copy of the backend on the laptop. If AWS is unreachable, run it locally and connect the phone over the same hotspot.</li>
+        <li>Screen recording of a full run, ready to play.</li>
+        <li>Charger, extension board, printed QR code that opens the citizen screen.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="eyebrow">Evaluation</div><h2>How you prove it works</h2>
+  <p class="muted">Fill this in from your own 30-photo test set. Judges trust a small honest number more than a big claimed one.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Measure</th><th>How</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Hazard type accuracy</td><td>Model type vs your label, per class</td><td class="muted">To measure</td></tr>
+      <tr><td>Urgency agreement</td><td>Model urgency vs two team members' independent rating</td><td class="muted">To measure</td></tr>
+      <tr><td>False alarms on good roads</td><td>Share of clean-road photos not returned as "None"</td><td class="muted">To measure</td></tr>
+      <tr><td>Box quality</td><td>Overlap (IoU) with hand-drawn boxes</td><td class="muted">To measure</td></tr>
+      <tr><td>Valid JSON rate</td><td>Responses that pass the validator on the first try</td><td class="muted">To measure</td></tr>
+      <tr><td>Time per report</td><td>Upload to result card, median</td><td class="muted">To measure</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<div class="cols2">
+  <section class="panel">
+    <h3>Limits to state up front</h3>
+    <ul class="plain">
+      <li>Depth from one photo is an estimate, which is why the schema uses a depth category instead of centimetres.</li>
+      <li>Boxes from a language model are approximate: good for highlighting, not for measuring.</li>
+      <li>Night, glare and rain lower accuracy; low-confidence results go to a person.</li>
+      <li>The system suggests; an engineer approves. Nothing is closed without a human or an after photo.</li>
+    </ul>
+  </section>
+  <section class="panel">
+    <h3>Future scope</h3>
+    <ul class="plain">
+      <li>Dashcam or bus-mounted camera scanning whole routes automatically.</li>
+      <li>Kannada and Hindi interface and WhatsApp reporting.</li>
+      <li>Ward-level heatmaps to plan resurfacing budgets.</li>
+      <li>Public tracker so citizens see time-to-fix by ward.</li>
+    </ul>
+  </section>
+</div>
+
+<div class="pitch">
+  <q>Every road complaint gets an engineer's first look in seconds, and the most dangerous spot is always at the top of the list.</q>
+  <span>Pitch line for the judges</span>
+</div>
+
+</div>
+
+<script>
+(function(){
+  var S={
+    pothole:{ticket:"RS-0142",sla:"48 hours",j:{hazard_type:"Pothole",confidence:0.91,severity_score:7.6,urgency_level:"HIGH",
+      repair_recommendation:"Saw-cut to a rectangle, clean and apply tack coat, fill with hot-mix asphalt in layers and roller-compact. Use cold-mix if raining.",
+      estimated_repair_time_hours:3,estimated_dimensions:{width_cm:65,depth_category:"Deep"},bounding_box:{ymin:520,xmin:300,ymax:800,xmax:700}}},
+    manhole:{ticket:"RS-0143",sla:"12–24 hours",j:{hazard_type:"Open Manhole",confidence:0.95,severity_score:9.6,urgency_level:"CRITICAL",
+      repair_recommendation:"Cordon with barricades and reflective cones now. Install a heavy-duty ductile iron cover and frame rated for carriageways, re-bedded in rapid-set mortar.",
+      estimated_repair_time_hours:6,estimated_dimensions:{width_cm:60,depth_category:"Sub-base Breach"},bounding_box:{ymin:530,xmin:370,ymax:790,xmax:640}}},
+    none:{ticket:"RS-0144",sla:"No action",j:{hazard_type:"None",confidence:0.88,severity_score:1.2,urgency_level:"LOW",
+      repair_recommendation:"No repair needed. Log for the routine ward inspection.",
+      estimated_repair_time_hours:0,estimated_dimensions:{width_cm:0,depth_category:"Shallow"},bounding_box:{ymin:0,xmin:0,ymax:0,xmax:0}}}
+  };
+  var cv=document.getElementById("cv"),ctx=cv.getContext("2d");
+  function rng(seed){return function(){seed=(seed*16807)%2147483647;return (seed-1)/2147483646}}
+  function road(seed){
+    var W=cv.width,H=cv.height,r=rng(seed);
+    var g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#5d6366");g.addColorStop(1,"#3d4245");
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    for(var i=0;i<5200;i++){var v=60+Math.floor(r()*70);ctx.fillStyle="rgba("+v+","+v+","+(v+4)+","+(0.25+r()*0.35)+")";ctx.fillRect(r()*W,r()*H,1+r()*2,1+r()*2)}
+    ctx.fillStyle="#d9b021";
+    for(var k=0;k<4;k++){var y=k*130-20;ctx.beginPath();ctx.moveTo(W*0.49,y);ctx.lineTo(W*0.51,y);ctx.lineTo(W*0.515+k*1.5,y+80);ctx.lineTo(W*0.485-k*1.5,y+80);ctx.closePath();ctx.fill()}
+    ctx.fillStyle="rgba(230,230,225,.85)";ctx.fillRect(0,H*0.05,14,H);ctx.fillRect(W-14,H*0.05,14,H);
+  }
+  function pothole(){
+    var W=cv.width,H=cv.height,cx=W*0.5,cy=H*0.66,r=rng(7);
+    ctx.save();ctx.beginPath();
+    for(var a=0;a<=Math.PI*2+0.01;a+=0.18){var rr=1+(r()-0.5)*0.28;var x=cx+Math.cos(a)*W*0.18*rr,y=cy+Math.sin(a)*H*0.12*rr;a?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+    ctx.closePath();ctx.fillStyle="#7b766c";ctx.fill();ctx.restore();
+    var r2=rng(11);ctx.beginPath();
+    for(var b=0;b<=Math.PI*2+0.01;b+=0.18){var q=1+(r2()-0.5)*0.22;var x2=cx+Math.cos(b)*W*0.145*q,y2=cy+Math.sin(b)*H*0.095*q;b?ctx.lineTo(x2,y2):ctx.moveTo(x2,y2)}
+    ctx.closePath();var g=ctx.createRadialGradient(cx,cy+6,4,cx,cy,W*0.15);g.addColorStop(0,"#161717");g.addColorStop(.7,"#2b2b29");g.addColorStop(1,"#4d4b46");ctx.fillStyle=g;ctx.fill();
+    for(var i=0;i<90;i++){ctx.fillStyle="rgba(150,145,135,.8)";ctx.fillRect(cx-W*0.2+r()*W*0.4,cy-H*0.13+r()*H*0.26,2,2)}
+  }
+  function manhole(){
+    var W=cv.width,H=cv.height,cx=W*0.5,cy=H*0.66;
+    ctx.beginPath();ctx.ellipse(cx,cy,W*0.13,H*0.12,0,0,Math.PI*2);ctx.fillStyle="#8d8f8c";ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx,cy,W*0.105,H*0.095,0,0,Math.PI*2);var g=ctx.createRadialGradient(cx,cy,2,cx,cy,W*0.1);g.addColorStop(0,"#050505");g.addColorStop(1,"#1d1e1e");ctx.fillStyle=g;ctx.fill();
+    ctx.save();ctx.translate(W*0.82,H*0.8);ctx.rotate(-0.4);ctx.beginPath();ctx.ellipse(0,0,W*0.1,H*0.07,0,0,Math.PI*2);ctx.fillStyle="#4a4c4c";ctx.fill();
+    ctx.strokeStyle="#666a6a";ctx.lineWidth=3;for(var i=-3;i<=3;i++){ctx.beginPath();ctx.moveTo(i*9,-H*0.05);ctx.lineTo(i*9,H*0.05);ctx.stroke()}ctx.restore();
+  }
+  function box(b,color){
+    if(!(b.ymax>b.ymin&&b.xmax>b.xmin))return;
+    var W=cv.width,H=cv.height,x=b.xmin/1000*W,y=b.ymin/1000*H,w=(b.xmax-b.xmin)/1000*W,h=(b.ymax-b.ymin)/1000*H;
+    ctx.lineWidth=4;ctx.strokeStyle=color;ctx.strokeRect(x,y,w,h);
+    ctx.font="600 20px 'IBM Plex Sans',sans-serif";var t=" "+b.label+" ";var tw=ctx.measureText(t).width;
+    ctx.fillStyle=color;ctx.fillRect(x-2,y-30,tw,28);ctx.fillStyle="#fff";ctx.fillText(t,x-2,y-9);
+  }
+  var urgVar={LOW:"--low",MEDIUM:"--med",HIGH:"--high",CRITICAL:"--crit"};
+  var boxCol={LOW:"#2C7A4B",MEDIUM:"#A86F00",HIGH:"#E0601B",CRITICAL:"#D32F2F"};
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+  function hl(o){
+    return esc(JSON.stringify(o,null,2))
+      .replace(/"([^"]+)":/g,'<span class="k">"$1"</span>:')
+      .replace(/: "([^"]*)"/g,': <span class="s">"$1"</span>')
+      .replace(/: (-?\d+(\.\d+)?)/g,': <span class="n">$1</span>');
+  }
+  function show(key){
+    var s=S[key],j=s.j;
+    road(key==="none"?99:key==="manhole"?41:13);
+    if(key==="pothole")pothole(); if(key==="manhole")manhole();
+    if(j.hazard_type!=="None"){var b=Object.assign({label:j.hazard_type+" "+j.severity_score},j.bounding_box);box(b,boxCol[j.urgency_level])}
+    else{ctx.font="600 20px 'IBM Plex Sans',sans-serif";ctx.fillStyle="rgba(20,24,26,.75)";ctx.fillRect(16,16,220,34);ctx.fillStyle="#fff";ctx.fillText("No damage found",28,40)}
+    document.getElementById("json").innerHTML=hl(j);
+    document.getElementById("ticket").textContent="Ticket "+s.ticket;
+    document.getElementById("r-type").textContent=j.hazard_type==="None"?"Road OK":j.hazard_type;
+    var u=document.getElementById("r-urg");u.textContent=j.urgency_level;u.className="chip c-"+j.urgency_level;
+    document.getElementById("r-sev").textContent=j.severity_score.toFixed(1)+" / 10";
+    var bar=document.getElementById("r-bar");bar.style.width=(j.severity_score*10)+"%";bar.style.background="var("+urgVar[j.urgency_level]+")";
+    document.getElementById("r-conf").textContent=Math.round(j.confidence*100)+"%";
+    document.getElementById("r-size").textContent=j.estimated_dimensions.width_cm?("about "+j.estimated_dimensions.width_cm+" cm wide, "+j.estimated_dimensions.depth_category.toLowerCase()):"No damage to measure";
+    document.getElementById("r-hrs").textContent=j.estimated_repair_time_hours?("about "+j.estimated_repair_time_hours+" hours"):"None";
+    document.getElementById("r-sla").textContent=s.sla;
+    document.getElementById("r-rec").textContent=j.repair_recommendation;
+    document.querySelectorAll(".tab").forEach(function(t){t.setAttribute("aria-selected",t.dataset.s===key?"true":"false")});
+  }
+  document.querySelectorAll(".tab").forEach(function(t){t.addEventListener("click",function(){show(t.dataset.s)})});
+  show("pothole");
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){var a=document.querySelector('.tab[aria-selected="true"]');show(a?a.dataset.s:"pothole")});
+})();
+</script>
