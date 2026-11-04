@@ -140,6 +140,7 @@ export const hi: Dict = {
   "report.assignee": "किसे सौंपा",
   "report.notAssigned": "अभी किसी को नहीं सौंपा",
   "report.citizens": "इसे बताने वाले नागरिक",
+  "report.defects": "इस फ़ोटो में {n} समस्याएँ मिलीं",
   "report.recommendation": "सुझाई गई मरम्मत",
   "report.repairTime": "अनुमानित मरम्मत समय",
   "report.hoursValue": "लगभग {n} घंटे",

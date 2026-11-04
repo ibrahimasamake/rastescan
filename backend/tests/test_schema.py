@@ -42,3 +42,27 @@ def test_parse_rejects_invalid(bad):
 
 def test_none_hazard_allows_empty_box():
     assert parse_inspection(json.dumps(make_result(hazard="None", severity=1.0, urgency="LOW", box=(0, 0, 0, 0)))).hazard_type == "None"
+
+
+def test_several_defects_are_combined_worst_first():
+    from app.inspector import parse_inspection
+    import json
+    from tests.conftest import make_result
+    a = make_result(severity=5.2, urgency="MEDIUM", box=(600, 560, 780, 760))
+    b = make_result(severity=7.6, box=(520, 120, 760, 380))
+    dup = make_result(severity=7.0, box=(525, 125, 755, 375))  # same pothole again
+    none = make_result(hazard="None", severity=1.2, box=(0, 0, 0, 0))
+    r = parse_inspection(json.dumps({"detections": [a, b, dup, none]}))
+    assert [d.severity_score for d in r.detections] == [7.6, 5.2]
+    assert r.severity_score == 7.6 and r.estimated_repair_time_hours == 6
+    assert [d.urgency_level for d in r.detections] == ["HIGH", "MEDIUM"]
+
+
+def test_single_object_answer_still_works_and_all_none_stays_none():
+    from app.inspector import parse_inspection
+    import json
+    from tests.conftest import make_result
+    one = parse_inspection(json.dumps(make_result()))
+    assert one.hazard_type == "Pothole" and len(one.detections) == 1
+    clean = parse_inspection(json.dumps({"detections": [make_result(hazard="None", severity=1.2, box=(0, 0, 0, 0))]}))
+    assert clean.hazard_type == "None" and clean.detections == []

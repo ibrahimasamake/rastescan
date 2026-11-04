@@ -26,7 +26,7 @@ EXPECTED = {
     "modelId": "apac.amazon.nova-pro-v1:0",
     "system": [{"text": "PROMPT"}],
     "messages": ANY,
-    "inferenceConfig": {"maxTokens": 800, "temperature": 0},
+    "inferenceConfig": {"maxTokens": 2000, "temperature": 0},
 }
 
 

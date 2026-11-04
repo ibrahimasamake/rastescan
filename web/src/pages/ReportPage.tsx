@@ -4,7 +4,7 @@ import { api, ApiError, type PublicDetail } from "../api";
 import { DemoBadge, StatusBadge, UrgencyBadge } from "../components/Badges";
 import { Icon } from "../components/Icons";
 import { PageHead } from "../components/Layout";
-import { BeforeAfter, PhotoWithBox, SeverityMeter, Timeline } from "../components/Report";
+import { BeforeAfter, DetectionList, PhotoWithBox, SeverityMeter, Timeline } from "../components/Report";
 import { ErrorBox, Skeleton, Toast, useAsync, useToast } from "../components/States";
 import { CLOSED, deviceId, hazardLabel, sla } from "../format";
 import { useI18n } from "../i18n";
@@ -156,6 +156,7 @@ export default function ReportPage() {
               <h3>{t("report.recommendation")}</h3>
               <p className="rec" lang="en">{res.repair_recommendation}</p>
             </div>
+            <DetectionList result={res} />
           </section>
 
           <section className="card pad section" aria-labelledby="tl-h">

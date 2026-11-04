@@ -14,9 +14,9 @@ from typing import Callable, Protocol
 
 from pydantic import ValidationError
 
-from .schema import Inspection
+from .schema import Detection, Inspection, combine
 
-ASK = "Inspect this road photo. Return only the JSON object."
+ASK = "Inspect this whole road photo and list every defect you can see. Return only the JSON object."
 FIX = "That answer did not match the schema. Reply with only one valid JSON object that matches it exactly."
 
 
@@ -40,8 +40,13 @@ def parse_inspection(text: str) -> Inspection:
     if start == -1 or end <= start:
         raise InspectionError("no JSON object in model answer")
     try:
-        return Inspection.model_validate(json.loads(cleaned[start : end + 1]))
-    except (json.JSONDecodeError, ValidationError) as exc:
+        data = json.loads(cleaned[start : end + 1])
+        # New format {"detections": [...]}; a single bare defect object is still accepted.
+        raw = data["detections"] if isinstance(data, dict) and "detections" in data else [data]
+        if not isinstance(raw, list) or not raw:
+            raise InspectionError("no detections in model answer")
+        return combine([Detection.model_validate(d) for d in raw])
+    except (json.JSONDecodeError, ValidationError, TypeError) as exc:
         raise InspectionError(str(exc)) from exc
 
 
@@ -94,7 +99,7 @@ class BedrockInspector:
             modelId=self.model_id,
             system=[{"text": self.prompt}],
             messages=messages,
-            inferenceConfig={"maxTokens": 800, "temperature": 0},
+            inferenceConfig={"maxTokens": 2000, "temperature": 0},
         )
         return "".join(block.get("text", "") for block in resp["output"]["message"]["content"])
 
@@ -176,7 +181,7 @@ class GroqInspector(_HttpInspector):
             "model": self.model,
             "messages": messages,
             "temperature": 0,
-            "max_completion_tokens": 800,
+            "max_completion_tokens": 2000,
             "response_format": {"type": "json_object"},
         })
         resp.raise_for_status()
@@ -200,7 +205,7 @@ class OllamaInspector(_HttpInspector):
 
     def _post(self, messages: list) -> str:
         resp = self.http.post(f"{self.url}/api/chat", json={
-            "model": self.model, "messages": messages, "stream": False, "format": "json", "options": {"temperature": 0},
+            "model": self.model, "messages": messages, "stream": False, "format": "json", "options": {"temperature": 0, "num_predict": 2000},
         })
         resp.raise_for_status()
         return resp.json()["message"]["content"] or ""
@@ -223,6 +228,20 @@ _FAKE_RESULTS = [
      "repair_recommendation": "No repair needed.", "estimated_repair_time_hours": 0,
      "estimated_dimensions": {"width_cm": 0, "depth_category": "Shallow"},
      "bounding_box": {"ymin": 0, "xmin": 0, "ymax": 0, "xmax": 0}},
+    {"detections": [
+        {"hazard_type": "Pothole", "confidence": 0.9, "severity_score": 7.6, "urgency_level": "HIGH",
+         "repair_recommendation": "Saw-cut, tack coat, hot-mix asphalt patch with roller compaction.",
+         "estimated_repair_time_hours": 3, "estimated_dimensions": {"width_cm": 65, "depth_category": "Deep"},
+         "bounding_box": {"ymin": 520, "xmin": 120, "ymax": 760, "xmax": 380}},
+        {"hazard_type": "Pothole", "confidence": 0.85, "severity_score": 5.2, "urgency_level": "MEDIUM",
+         "repair_recommendation": "Cold-mix asphalt patch and tamper compaction.",
+         "estimated_repair_time_hours": 2, "estimated_dimensions": {"width_cm": 40, "depth_category": "Moderate"},
+         "bounding_box": {"ymin": 600, "xmin": 560, "ymax": 780, "xmax": 760}},
+        {"hazard_type": "Road Fissure", "confidence": 0.8, "severity_score": 4.1, "urgency_level": "MEDIUM",
+         "repair_recommendation": "Rout and seal cracks with hot-poured bitumen sealant.",
+         "estimated_repair_time_hours": 1, "estimated_dimensions": {"width_cm": 150, "depth_category": "Shallow"},
+         "bounding_box": {"ymin": 300, "xmin": 200, "ymax": 450, "xmax": 800}},
+    ]},
 ]
 
 
@@ -234,7 +253,7 @@ class FakeInspector:
 
     def inspect(self, jpeg: bytes) -> Inspection:
         pick = hashlib.sha256(jpeg).digest()[0] % len(_FAKE_RESULTS)
-        return Inspection.model_validate(_FAKE_RESULTS[pick])
+        return parse_inspection(json.dumps(_FAKE_RESULTS[pick]))
 
 
 def make_inspector(settings) -> Inspector:

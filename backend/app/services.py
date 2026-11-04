@@ -81,7 +81,9 @@ class Ctx:
 
     @property
     def model_tag(self) -> str:
-        return f"{self.inspector.mode}:{getattr(self.inspector, 'model', '')}"
+        # The prompt is part of the key, so changing it (e.g. to find every defect) never serves older cached answers.
+        prompt = getattr(self.inspector, "prompt", "")
+        return f"{self.inspector.mode}:{getattr(self.inspector, 'model', '')}:{hashlib.sha256(prompt.encode()).hexdigest()[:8]}"
 
     @property
     def tz(self) -> ZoneInfo:

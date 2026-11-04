@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { absUrl, type Inspection, type PublicReport, type TimelineEvent, type Urgency } from "../api";
+import { absUrl, detectionsOf, type Inspection, type PublicReport, type TimelineEvent, type Urgency } from "../api";
 import { ago, hazardLabel, statusLabel, urgencyLabel } from "../format";
 import { useI18n } from "../i18n";
 import type { Key } from "../i18n/en";
@@ -10,18 +10,42 @@ import { Icon } from "./Icons";
 /** The photo with the damage boxed, drawn from the model's 0–1000 coordinates. */
 export function PhotoWithBox({ src, result, urgency, alt }: { src: string; result: Inspection; urgency: Urgency; alt: string }) {
   const { t } = useI18n();
-  const b = result.bounding_box;
-  const hasBox = result.hazard_type !== "None" && b.ymax > b.ymin && b.xmax > b.xmin;
+  const found = detectionsOf(result).filter((d) => d.bounding_box.ymax > d.bounding_box.ymin && d.bounding_box.xmax > d.bounding_box.xmin);
+  const many = found.length > 1;
   return (
     <div className="photo">
       <img src={absUrl(src)} alt={alt} loading="lazy" decoding="async" />
-      {hasBox && (
-        <div className={`box box-${urgency}`} aria-hidden="true" style={{
-          top: `${b.ymin / 10}%`, left: `${b.xmin / 10}%`, height: `${(b.ymax - b.ymin) / 10}%`, width: `${(b.xmax - b.xmin) / 10}%`,
-        }}>
-          <span>{hazardLabel(t, result.hazard_type)} {result.severity_score.toFixed(1)}</span>
-        </div>
-      )}
+      {found.map((d, i) => {
+        const b = d.bounding_box;
+        return (
+          <div key={i} className={`box box-${many ? d.urgency_level : urgency}`} aria-hidden="true" style={{
+            top: `${b.ymin / 10}%`, left: `${b.xmin / 10}%`, height: `${(b.ymax - b.ymin) / 10}%`, width: `${(b.xmax - b.xmin) / 10}%`,
+          }}>
+            <span>{many ? `${i + 1} · ${d.severity_score.toFixed(1)}` : `${hazardLabel(t, d.hazard_type)} ${d.severity_score.toFixed(1)}`}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Numbered list of every defect found in the photo; shown only when there is more than one. */
+export function DetectionList({ result }: { result: Inspection }) {
+  const { t } = useI18n();
+  const list = detectionsOf(result);
+  if (list.length < 2) return null;
+  return (
+    <div className="section">
+      <h3>{t("report.defects", { n: list.length })}</h3>
+      <ol className="defects">
+        {list.map((d, i) => (
+          <li key={i}>
+            <b>{hazardLabel(t, d.hazard_type)}</b> · {t("report.severityValue", { n: d.severity_score.toFixed(1) })} · {urgencyLabel(t, d.urgency_level)}
+            {d.estimated_dimensions.width_cm > 0 && <> · {t("report.sizeValue", { cm: d.estimated_dimensions.width_cm, depth: t(`depth.${d.estimated_dimensions.depth_category}` as Key) })}</>}
+            <p className="rec small" lang="en">{d.repair_recommendation}</p>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

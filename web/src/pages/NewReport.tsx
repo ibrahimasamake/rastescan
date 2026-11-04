@@ -4,7 +4,7 @@ import { api, ApiError, type Report } from "../api";
 import { UrgencyBadge } from "../components/Badges";
 import { Icon } from "../components/Icons";
 import { PageHead } from "../components/Layout";
-import { PhotoWithBox, SeverityMeter } from "../components/Report";
+import { DetectionList, PhotoWithBox, SeverityMeter } from "../components/Report";
 import { Skeleton } from "../components/States";
 import { deviceId, hazardLabel } from "../format";
 import { useI18n } from "../i18n";
@@ -64,6 +64,7 @@ function Result({ r, again }: { r: Report; again: () => void }) {
             <p className="small">{t("report.severityValue", { n: r.severity.toFixed(1) })} · {t(`fix.${r.urgency}` as Key)}</p>
             <SeverityMeter score={r.severity} urgency={r.urgency} />
             <p className="rec" lang="en">{res.repair_recommendation}</p>
+            <DetectionList result={res} />
           </div>
         )}
       </div>

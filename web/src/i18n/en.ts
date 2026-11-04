@@ -143,6 +143,7 @@ export const en = {
   "report.assignee": "Assigned to",
   "report.notAssigned": "Not assigned yet",
   "report.citizens": "Citizens who reported this",
+  "report.defects": "{n} problems found in this photo",
   "report.recommendation": "Recommended repair",
   "report.repairTime": "Estimated repair time",
   "report.hoursValue": "About {n} hours",

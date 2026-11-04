@@ -140,6 +140,7 @@ export const kn: Dict = {
   "report.assignee": "ನಿಯೋಜಿತರು",
   "report.notAssigned": "ಇನ್ನೂ ನಿಯೋಜಿಸಿಲ್ಲ",
   "report.citizens": "ಇದನ್ನು ವರದಿ ಮಾಡಿದ ನಾಗರಿಕರು",
+  "report.defects": "ಈ ಫೋಟೋದಲ್ಲಿ {n} ಸಮಸ್ಯೆಗಳು ಕಂಡುಬಂದಿವೆ",
   "report.recommendation": "ಶಿಫಾರಸು ಮಾಡಿದ ದುರಸ್ತಿ",
   "report.repairTime": "ಅಂದಾಜು ದುರಸ್ತಿ ಸಮಯ",
   "report.hoursValue": "ಸುಮಾರು {n} ಗಂಟೆ",

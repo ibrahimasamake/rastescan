@@ -8,7 +8,7 @@ export type Urgency = (typeof URGENCIES)[number];
 export type Status = "new" | "review" | "assigned" | "fixed" | "verified" | "dismissed" | "no_damage";
 export type PublicStatus = "reported" | "ai_verified" | "assigned" | "repair_done" | "resolved" | "dismissed";
 
-export interface Inspection {
+export interface Detection {
   hazard_type: Hazard;
   confidence: number;
   severity_score: number;
@@ -17,6 +17,17 @@ export interface Inspection {
   estimated_repair_time_hours: number;
   estimated_dimensions: { width_cm: number; depth_category: string };
   bounding_box: { ymin: number; xmin: number; ymax: number; xmax: number };
+}
+
+/** The worst defect in the photo, plus every defect found (worst first). Older reports have no `detections`. */
+export interface Inspection extends Detection {
+  detections?: Detection[];
+}
+
+/** Every real defect in a result; falls back to the headline defect for reports made before multi-defect scans. */
+export function detectionsOf(r: Inspection): Detection[] {
+  if (r.detections?.length) return r.detections;
+  return r.hazard_type === "None" ? [] : [r];
 }
 
 export interface Ward {
