@@ -15,7 +15,7 @@ Built for the TechKubik National Level Project Expo 2026 (HKBK College of Engine
 - **Government dashboard** (officer login): queue ordered by urgency and deadline, assign crews, official public
   updates, repair photo re-inspection by the AI, review queue for unsure results, merge duplicates, crew work orders,
   analytics, officer accounts, audit trail of every change.
-- **AI providers**: Amazon Nova on Bedrock, Groq (free key), Ollama (local, free) or a fake test mode.
+- **AI providers**: Amazon Nova on Bedrock, Groq (free key), Ollama (local, free), a YOLO road-damage detector, or a fake test mode. Admins can compare them on one photo in the **AI models** page.
   The model only suggests; the server applies fixed urgency rules.
 - **Android app** (Capacitor) and **AWS deploy** with Terraform + Ansible.
 
@@ -74,6 +74,7 @@ Details in [docs/aws-setup.md](docs/aws-setup.md). Android build and Play intern
 
 ## Guides
 - [Choose your AI provider](docs/ai-providers.md) and compare them with `make evaluate`
+- [YOLO road-damage detector](docs/yolo.md): free, fast boxes for potholes and cracks, no rate limits
 - [Officer guide (1 page)](docs/officer-guide.md)
 - [Citizen FAQ](docs/citizen-faq.md)
 - [Original project design](docs/design.html)
