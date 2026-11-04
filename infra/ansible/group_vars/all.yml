@@ -4,6 +4,9 @@ data_dir: /var/lib/rastescan
 repo_root: "{{ playbook_dir }}/../.."
 # "bedrock" in production. For a stopgap while Bedrock is locked: export RASTESCAN_AI_MODE=fake (app shows a Test mode banner).
 ai_mode: "{{ lookup('env', 'RASTESCAN_AI_MODE') | default('bedrock', true) }}"
+# Only for AI_MODE=groq. Read from your shell so the key never lands in git: export GROQ_API_KEY=...
+groq_api_key: "{{ lookup('env', 'GROQ_API_KEY') }}"
+groq_model: "{{ lookup('env', 'GROQ_MODEL') | default('meta-llama/llama-4-scout-17b-16e-instruct', true) }}"
 max_upload_mb: 8
 reports_per_hour: 30
 # Read from your shell so it never lands in git: export RASTESCAN_DASHBOARD_PIN=...

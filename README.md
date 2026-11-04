@@ -21,6 +21,10 @@ cd backend
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 AI_MODE=fake .venv/bin/uvicorn app.main:create_app --factory --reload --port 8000
 ```
+Free AI alternatives (no AWS needed): `AI_MODE=groq GROQ_API_KEY=... ` (key from console.groq.com, never commit it) or
+`AI_MODE=ollama` after `ollama pull qwen2.5vl:7b` (runs on your laptop). The full feature plan for finishing the project
+is in `docs/COMPLETE-BUILD-PROMPT.md`.
+
 With real Bedrock instead: `aws configure` with your own IAM user, then `AI_MODE=bedrock AWS_REGION=ap-south-1 BEDROCK_MODEL_ID=apac.amazon.nova-pro-v1:0 ...`.
 
 Web app (Node 20+), in a second terminal:

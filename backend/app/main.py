@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from . import imaging, triage
 from .config import Settings
 from .db import Database
-from .inspector import BedrockInspector, FakeInspector, Inspector, InspectionError, load_prompt
+from .inspector import BedrockInspector, FakeInspector, Inspector, InspectionError, OpenAICompatInspector, load_prompt
 from .ratelimit import RateLimiter
 from .schema import Inspection, needs_human_review, urgency_for
 from .storage import LocalStorage, S3Storage
@@ -32,9 +32,17 @@ def create_app(settings: Settings | None = None, inspector: Inspector | None = N
     if inspector is None:
         if settings.ai_mode == "fake":
             inspector = FakeInspector()
+        elif settings.ai_mode == "groq":
+            if not settings.groq_api_key:
+                raise RuntimeError("AI_MODE=groq needs GROQ_API_KEY.")
+            inspector = OpenAICompatInspector("groq", "https://api.groq.com/openai/v1", settings.groq_model,
+                                              load_prompt(settings.prompt_file), settings.groq_api_key)
+        elif settings.ai_mode == "ollama":
+            inspector = OpenAICompatInspector("ollama", settings.ollama_url, settings.ollama_model,
+                                              load_prompt(settings.prompt_file), timeout=180)
         else:
             inspector = BedrockInspector(settings.bedrock_model_id, settings.bedrock_region, load_prompt(settings.prompt_file))
-    model_tag = settings.bedrock_model_id if inspector.mode == "bedrock" else "fake"
+    model_tag = getattr(inspector, "model_id", "fake")
     db = Database(settings.data_dir / "rastescan.db")
     storage = S3Storage(settings.s3_bucket, settings.aws_region) if settings.s3_bucket else LocalStorage(settings.data_dir / "photos")
     limiter = RateLimiter(settings.reports_per_hour)
@@ -118,7 +126,7 @@ def create_app(settings: Settings | None = None, inspector: Inspector | None = N
     # ---------- routes ----------
     @app.get("/api/health")
     def health():
-        return {"ok": True, "ai_mode": inspector.mode, "model": model_tag if inspector.mode == "bedrock" else None}
+        return {"ok": True, "ai_mode": inspector.mode, "model": model_tag if inspector.mode != "fake" else None}
 
     @app.post("/api/reports")
     async def create_report(

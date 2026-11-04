@@ -1,7 +1,9 @@
 """Sends a prepared photo to the vision model and returns a validated Inspection."""
 import hashlib
 import json
+import base64
 import re
+import urllib.request
 from pathlib import Path
 from typing import Protocol
 
@@ -73,6 +75,47 @@ class BedrockInspector:
             messages += [
                 {"role": "assistant", "content": [{"text": answer or "(empty)"}]},
                 {"role": "user", "content": [{"text": "That answer did not match the schema. Reply with only one valid JSON object that matches it exactly."}]},
+            ]
+            return parse_inspection(self._ask(messages))
+
+
+class OpenAICompatInspector:
+    """Any vision model behind an OpenAI-style /chat/completions endpoint: Groq (free tier) or a local Ollama."""
+
+    def __init__(self, mode: str, base_url: str, model_id: str, prompt: str, api_key: str = "", timeout: float = 60):
+        self.mode = mode
+        self.url = base_url.rstrip("/") + "/chat/completions"
+        self.model_id = model_id
+        self.prompt = prompt
+        self.api_key = api_key
+        self.timeout = timeout
+
+    def _ask(self, messages: list) -> str:
+        body = json.dumps({"model": self.model_id, "messages": messages, "temperature": 0, "max_tokens": 800}).encode()
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        req = urllib.request.Request(self.url, data=body, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            data = json.load(resp)
+        return data["choices"][0]["message"]["content"] or ""
+
+    def inspect(self, jpeg: bytes) -> Inspection:
+        image = "data:image/jpeg;base64," + base64.b64encode(jpeg).decode()
+        messages = [
+            {"role": "system", "content": self.prompt},
+            {"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": image}},
+                {"type": "text", "text": "Inspect this road photo. Return only the JSON object."},
+            ]},
+        ]
+        answer = self._ask(messages)
+        try:
+            return parse_inspection(answer)
+        except InspectionError:
+            messages += [
+                {"role": "assistant", "content": answer or "(empty)"},
+                {"role": "user", "content": "That answer did not match the schema. Reply with only one valid JSON object that matches it exactly."},
             ]
             return parse_inspection(self._ask(messages))
 

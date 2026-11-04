@@ -12,7 +12,11 @@ def _list(name: str, default: str) -> list[str]:
 
 @dataclass(frozen=True)
 class Settings:
-    # "bedrock" in production. "fake" returns canned results for local UI work and tests only.
+    groq_api_key: str = field(default_factory=lambda: os.getenv("GROQ_API_KEY", ""))
+    groq_model: str = field(default_factory=lambda: os.getenv("GROQ_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct"))
+    ollama_url: str = field(default_factory=lambda: os.getenv("OLLAMA_URL", "http://localhost:11434/v1"))
+    ollama_model: str = field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "qwen2.5vl:7b"))
+    # "bedrock", "groq" or "ollama" for real inspections. "fake" returns canned results for local UI work and tests only.
     ai_mode: str = field(default_factory=lambda: os.getenv("AI_MODE", "bedrock"))
     aws_region: str = field(default_factory=lambda: os.getenv("AWS_REGION", "ap-south-1"))
     # Region for Bedrock calls only. Defaults to aws_region; set it when Bedrock is enabled in a different region.
