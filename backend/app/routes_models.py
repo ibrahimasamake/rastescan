@@ -4,6 +4,8 @@ Nothing here touches reports. A test run blurs the photo like a real report, cal
 answer and the time taken. Switching the live model lasts until the server restarts; AI_MODE in the environment decides
 what it starts with.
 """
+import json
+import threading
 import time
 
 import httpx
@@ -46,6 +48,31 @@ def _ollama(ctx: Ctx) -> tuple[bool, list[dict]]:
         return False, []
 
 
+def _ollama_base(ctx: Ctx) -> str:
+    return ctx.settings.ollama_url.rstrip("/").removesuffix("/v1")
+
+
+def _download(ctx: Ctx, tag: str) -> None:
+    """Runs in a background thread: asks the local Ollama to download `tag` and records its progress."""
+    state = ctx.pulls[tag]
+    try:
+        with httpx.stream("POST", f"{_ollama_base(ctx)}/api/pull", json={"model": tag, "stream": True}, timeout=None) as r:
+            if r.status_code != 200:
+                raise RuntimeError(f"Ollama answered HTTP {r.status_code}")
+            for line in r.iter_lines():
+                if not line:
+                    continue
+                msg = json.loads(line)
+                if msg.get("error"):
+                    raise RuntimeError(msg["error"])
+                state["status"] = msg.get("status", "")
+                if msg.get("total"):
+                    state["percent"] = round(100 * msg.get("completed", 0) / msg["total"])
+        state.update(running=False, percent=100, status="done")
+    except Exception as exc:  # noqa: BLE001 - shown to the admin
+        state.update(running=False, error=str(exc)[:200] or exc.__class__.__name__)
+
+
 def _live(ctx: Ctx) -> dict:
     return {"provider": ctx.inspector.mode, "model": getattr(ctx.inspector, "model", "") or ""}
 
@@ -78,6 +105,7 @@ def list_models(officer: auth.Officer = Depends(require_admin), ctx: Ctx = Depen
                    "runnable": False, "size_gb": None, "pull": None,
                    "note": "Fast box detector for potholes and cracks. Not installed: it would run as a separate service."})
     for m in models:
+        m["pull_state"] = ctx.pulls.get(m["model"]) if m["provider"] == "ollama" else None
         m["live"] = m["provider"] == live["provider"] and (m["model"] == live["model"] or not live["model"])
     return {"live": live, "ollama_running": up, "ollama_url": s.ollama_url, "models": models}
 
@@ -119,3 +147,19 @@ def set_live(body: Live, officer: auth.Officer = Depends(require_admin), ctx: Ct
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return {"live": _live(ctx)}
+
+
+class Pull(BaseModel):
+    model: str
+
+
+@router.post("/api/v2/admin/models/pull")
+def pull_model(body: Pull, officer: auth.Officer = Depends(require_admin), ctx: Ctx = Depends(get_ctx)):
+    """Download one of the recommended models into the local Ollama. Only the tags in RECOMMENDED are allowed."""
+    if body.model not in {tag for tag, _, _ in RECOMMENDED}:
+        raise HTTPException(400, "Only the models listed in the Model lab can be downloaded from here.")
+    if ctx.pulls.get(body.model, {}).get("running"):
+        return ctx.pulls[body.model]
+    ctx.pulls[body.model] = {"running": True, "percent": 0, "status": "starting", "error": None}
+    threading.Thread(target=_download, args=(ctx, body.model), daemon=True).start()
+    return ctx.pulls[body.model]

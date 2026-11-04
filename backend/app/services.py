@@ -78,6 +78,7 @@ class Ctx:
     limiter: RateLimiter
     login_limiter: RateLimiter
     ward_names: dict[str, str] = field(default_factory=dict)
+    pulls: dict = field(default_factory=dict)  # Ollama model downloads started from the admin Model lab
 
     @property
     def model_tag(self) -> str:

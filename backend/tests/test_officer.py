@@ -222,3 +222,17 @@ def test_model_lab_is_admin_only_and_tests_a_model_without_touching_reports(offi
                  files={"photo": ("p.jpg", photo_bytes(3), "image/jpeg")})
     assert bad.status_code == 400
     assert c.post("/api/v2/admin/models/live", headers=h, json={"provider": "fake"}).json()["live"]["provider"] == "fake"
+
+
+def test_model_pull_only_allows_recommended_tags(officer_client, monkeypatch):
+    from app import routes_models
+
+    c = officer_client
+    h = login(c)
+    assert c.post("/api/v2/admin/models/pull", json={"model": "evil/whatever:latest"}, headers=h).status_code == 400
+    started = []
+    monkeypatch.setattr(routes_models, "_download", lambda ctx, tag: started.append(tag))
+    r = c.post("/api/v2/admin/models/pull", json={"model": "qwen2.5vl:3b"}, headers=h).json()
+    assert r["running"] is True
+    assert c.post("/api/v2/admin/models/pull", json={"model": "qwen2.5vl:3b"}, headers=h).json()["running"] is True
+    assert len(started) <= 1  # a second click while running does not start a second download
