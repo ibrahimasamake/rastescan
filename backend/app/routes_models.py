@@ -127,6 +127,8 @@ async def test_model(photo: UploadFile = File(...), provider: str = Form(...), m
     try:
         jpeg, _ = imaging.prepare(raw)
         inspector = build_inspector(ctx.settings, provider, model or None)
+        if hasattr(inspector, "patient"):
+            inspector = inspector.patient()  # a lab run may take minutes on a laptop CPU
     except (imaging.BadImage, ValueError) as exc:
         raise HTTPException(400, str(exc)) from exc
     started = time.monotonic()

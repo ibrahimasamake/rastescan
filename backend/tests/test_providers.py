@@ -127,3 +127,14 @@ def test_yolo_with_nothing_found_is_a_clean_result():
     y.http = httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(200, json={"model": "m", "detections": []})))
     r = y.inspect(b"JPEG")
     assert r.hazard_type == "None" and r.detections == []
+
+
+def test_ollama_timeout_counts_as_busy_and_patient_copy_waits_longer():
+    def slow(req):
+        raise httpx.ReadTimeout("slow", request=req)
+
+    o = mock(OllamaInspector("http://x", "m", "P"), slow)
+    with pytest.raises(InspectorBusy):
+        o.inspect(b"x")
+    assert OllamaInspector("http://x", "m", "P").timeout_s == 45
+    assert OllamaInspector("http://x", "m", "P").patient().timeout_s == 900

@@ -236,3 +236,21 @@ def test_model_pull_only_allows_recommended_tags(officer_client, monkeypatch):
     assert r["running"] is True
     assert c.post("/api/v2/admin/models/pull", json={"model": "qwen2.5vl:3b"}, headers=h).json()["running"] is True
     assert len(started) <= 1  # a second click while running does not start a second download
+
+
+def test_pending_reports_are_finished_by_the_background_pass(officer_client, inspector):
+    from app.inspector import InspectorBusy
+    from app.services import process_pending
+
+    c = officer_client
+    real = inspector.inspect
+    inspector.inspect = lambda jpeg: (_ for _ in ()).throw(InspectorBusy("slow"))
+    first, second = submit(c, seed=1)["code"], submit(c, seed=2, lat=13.4)["code"]
+    ctx = c.app.state.ctx
+    assert process_pending(ctx) == 0  # still busy: postponed, nothing lost
+    inspector.inspect = real
+    assert process_pending(ctx) == 2
+    for code in (first, second):
+        r = c.get(f"/api/public/reports/{code}").json()
+        assert r["hazard_type"] == "Pothole" and r["public_status"] != "reported"
+    assert process_pending(ctx) == 0

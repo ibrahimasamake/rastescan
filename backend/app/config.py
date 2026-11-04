@@ -29,6 +29,8 @@ class Settings:
     ollama_model: str = field(default_factory=lambda: _env("OLLAMA_MODEL", "qwen2.5vl:7b"))
     # The separate YOLO road-damage detector (services/yolo).
     yolo_url: str = field(default_factory=lambda: _env("YOLO_URL", "http://localhost:8020"))
+    # How often the server retries reports saved without an AI answer. 0 turns the worker off.
+    rescan_every_s: int = field(default_factory=lambda: int(_env("RESCAN_EVERY_S", "20")))
     s3_bucket: str = field(default_factory=lambda: _env("S3_BUCKET"))
     data_dir: Path = field(default_factory=lambda: Path(_env("DATA_DIR", str(REPO_ROOT / "backend" / "data"))))
     web_dist: Path = field(default_factory=lambda: Path(_env("WEB_DIST", str(REPO_ROOT / "web" / "dist"))))

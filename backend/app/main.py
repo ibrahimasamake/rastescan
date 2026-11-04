@@ -1,5 +1,7 @@
 """RasteScan API: citizen reports in, a public record of every report, and a ranked repair queue for the city."""
 import logging
+import threading
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -58,7 +60,23 @@ def build_context(settings: Settings, inspector: Inspector | None = None) -> svc
 def create_app(settings: Settings | None = None, inspector: Inspector | None = None) -> FastAPI:
     settings = settings or Settings()
     ctx = build_context(settings, inspector)
-    app = FastAPI(title="RasteScan API", description="Public road damage reports and the city's repair queue.")
+    @asynccontextmanager
+    async def lifespan(_app):
+        stop = threading.Event()
+
+        def worker():
+            while not stop.wait(settings.rescan_every_s):
+                try:
+                    svc.process_pending(ctx)
+                except Exception:  # noqa: BLE001 - never let the worker die
+                    log.exception("pending-scan worker error")
+
+        if settings.rescan_every_s > 0:
+            threading.Thread(target=worker, name="pending-scan", daemon=True).start()
+        yield
+        stop.set()
+
+    app = FastAPI(title="RasteScan API", description="Public road damage reports and the city's repair queue.", lifespan=lifespan)
     app.state.ctx = ctx
     app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=["*"], allow_headers=["*"])
     app.add_middleware(GZipMiddleware, minimum_size=1000)

@@ -154,8 +154,20 @@ class _HttpInspector:
         import httpx
 
         self.http = httpx.Client(timeout=timeout_s)
+        self.timeout_s = timeout_s
         self.prompt = prompt
         self.backoff_s = 4.0
+
+    def patient(self, timeout_s: float = 900):
+        """A copy that waits much longer for an answer. The background worker uses it for slow local models."""
+        import copy
+
+        import httpx
+
+        twin = copy.copy(self)
+        twin.http = httpx.Client(timeout=timeout_s)
+        twin.timeout_s = timeout_s
+        return twin
 
     @staticmethod
     def _rate_limited(exc: Exception) -> bool:
@@ -169,6 +181,14 @@ class _HttpInspector:
         raise NotImplementedError
 
     def inspect(self, jpeg: bytes) -> Inspection:
+        import httpx
+
+        try:
+            return self._inspect(jpeg)
+        except httpx.TimeoutException as exc:
+            raise InspectorBusy(f"the model did not answer within {self.timeout_s:.0f}s") from exc
+
+    def _inspect(self, jpeg: bytes) -> Inspection:
         messages = self._first(jpeg)
         answer = with_backoff(lambda: self._post(messages), self._rate_limited, self.backoff_s)
         try:
@@ -215,7 +235,7 @@ class OllamaInspector(_HttpInspector):
     mode = "ollama"
 
     def __init__(self, url: str, model: str, prompt: str):
-        super().__init__(prompt, timeout_s=180)
+        super().__init__(prompt, timeout_s=45)  # a citizen should not wait longer; slow scans finish in the background
         self.url, self.model = url.rstrip("/"), model
 
     def _first(self, jpeg: bytes) -> list:

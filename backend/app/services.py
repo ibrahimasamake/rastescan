@@ -102,14 +102,14 @@ def record(ctx: Ctx, report_id: int, event: str, actor: str, *, officer_id: int 
 
 
 # ---------- AI ----------
-def inspect(ctx: Ctx, jpeg: bytes) -> Inspection:
+def inspect(ctx: Ctx, jpeg: bytes, inspector: Inspector | None = None) -> Inspection:
     """Cached by photo hash so the same photo never costs a second model call."""
     sha = hashlib.sha256(jpeg).hexdigest()
     hit = ctx.db.cached(sha, ctx.model_tag)
     if hit:
         return Inspection.model_validate_json(hit)
     try:
-        result = ctx.inspector.inspect(jpeg)
+        result = (inspector or ctx.inspector).inspect(jpeg)
     except (InspectionError, InspectorBusy):
         raise
     except Exception as exc:  # network, permissions, provider outage
@@ -311,9 +311,9 @@ def create_report(ctx: Ctx, jpeg: bytes, lat: float | None, lng: float | None, d
     return row_by_id(ctx, rid)
 
 
-def rescan(ctx: Ctx, row: dict) -> dict:
+def rescan(ctx: Ctx, row: dict, inspector: Inspector | None = None) -> dict:
     """Ask the AI again about a stored photo whose first scan was refused or unclear. Raises like inspect() does."""
-    result = inspect(ctx, ctx.storage.load(row["photo_key"]))
+    result = inspect(ctx, ctx.storage.load(row["photo_key"]), inspector)
     urgency = urgency_for(result)
     review = needs_human_review(result)
     status = "review" if review else "no_damage" if result.hazard_type == "None" else "new"
@@ -328,6 +328,25 @@ def rescan(ctx: Ctx, row: dict) -> dict:
         "hazard_type": result.hazard_type, "severity": result.severity_score, "urgency": urgency,
         "model_urgency": result.urgency_level, "confidence": result.confidence}, public=status != "no_damage")
     return row_by_id(ctx, row["id"])
+
+
+def process_pending(ctx: Ctx) -> int:
+    """Scan, oldest first, reports that were saved without an AI answer. Returns how many were finished.
+
+    Slow models (Ollama on a laptop CPU) and a busy free tier both end up here: the citizen's report is saved at once
+    and this fills in the answer. It stops at the first failure so a down or limited provider is not hammered.
+    """
+    patient = getattr(ctx.inspector, "patient", None)
+    inspector = patient() if patient else None
+    done = 0
+    for row in ctx.db.query("SELECT * FROM reports WHERE status = 'review' AND ai_pending = 1 ORDER BY id LIMIT 20"):
+        try:
+            rescan(ctx, row, inspector)
+            done += 1
+        except Exception as exc:  # noqa: BLE001 - busy, down or unusable answer: try again next round
+            log.warning("pending scan of %s postponed: %s", row["code"], exc)
+            break
+    return done
 
 
 def _raise_parent_priority(ctx: Ctx, parent_id: int, urgency: str, severity: float, at: datetime) -> None:
