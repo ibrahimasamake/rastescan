@@ -1,5 +1,5 @@
-import { absUrl, type Inspection, type Report, type Urgency } from "../api";
-import { FIX_WITHIN, URGENCY_LABEL, hazardName } from "../format";
+import { absUrl, type Inspection, type Report, type Urgency } from "./api";
+import { FIX_WITHIN, URGENCY_LABEL, hazardName } from "./format";
 
 export function UrgencyChip({ urgency }: { urgency: Urgency }) {
   return <span className={`chip chip-${urgency}`}>{URGENCY_LABEL[urgency]}</span>;

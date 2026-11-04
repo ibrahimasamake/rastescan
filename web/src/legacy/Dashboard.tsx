@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { ApiError, api, type Queue, type Report, type Status } from "../api";
-import { Layout } from "../components/Layout";
-import { PhotoWithBox, ResultDetails, UrgencyChip } from "../components/Result";
-import { STATUS_LABEL, URGENCY_LABEL, ago, dueText, hazardName } from "../format";
+import { ApiError, api, type Queue, type Report, type Status } from "./api";
+import { Layout } from "./Layout";
+import { PhotoWithBox, ResultDetails, UrgencyChip } from "./Result";
+import { STATUS_LABEL, URGENCY_LABEL, ago, dueText, hazardName } from "./format";
 
 const HOME: [number, number] = [13.0446, 77.62]; // Nagawara, near HKBK College of Engineering
 const URGENCIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
@@ -37,8 +37,8 @@ export default function Dashboard() {
   const afterRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
-    api.queue().then((q) => { setQueue(q); setLoadError(null); }).catch((e) => setLoadError(e instanceof ApiError ? e.message : "Could not load tickets."));
-  }, []);
+    api.queue(pin).then((q) => { setQueue(q); setLoadError(null); }).catch((e) => setLoadError(e instanceof ApiError ? e.message : "Could not load tickets."));
+  }, [pin]);
   useEffect(() => {
     load();
     const t = setInterval(load, 10000);

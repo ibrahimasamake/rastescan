@@ -1,5 +1,5 @@
 /** Shrinks a phone photo before upload. Phones take 4–12 MB photos; the server only needs about 1600 px. */
-export async function shrinkPhoto(file: File, maxSide = 1600): Promise<Blob> {
+export async function shrinkPhoto(file: Blob, maxSide = 1600): Promise<Blob> {
   try {
     const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
     const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
