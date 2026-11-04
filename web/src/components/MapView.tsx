@@ -7,10 +7,8 @@ import { Link } from "react-router-dom";
 import { absUrl, type PublicReport } from "../api";
 import { duration, hazardLabel, statusLabel, urgencyLabel } from "../format";
 import { useI18n } from "../i18n";
+import { PIN_COLOURS } from "../pins";
 
-export const PIN_COLOURS: Record<string, string> = {
-  CRITICAL: "#a3161a", HIGH: "#c2510f", MEDIUM: "#b88400", LOW: "#5b7a99", resolved: "#2e8b57", dismissed: "#8a94a1",
-};
 
 export function pinColour(r: PublicReport): string {
   if (r.public_status === "resolved") return PIN_COLOURS.resolved;

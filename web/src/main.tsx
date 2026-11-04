@@ -12,6 +12,9 @@ import "./styles.css";
 const ReportPage = lazy(() => import("./pages/ReportPage"));
 const NewReport = lazy(() => import("./pages/NewReport"));
 const MyReports = lazy(() => import("./pages/MyReports"));
+const MapPage = lazy(() => import("./pages/MapPage"));
+const ListPage = lazy(() => import("./pages/ListPage"));
+const Wards = lazy(() => import("./pages/Wards"));
 const LegacyDashboard = lazy(() => import("./legacy/Dashboard"));
 const Static = {
   About: lazy(() => import("./pages/Static").then((m) => ({ default: m.About }))),
@@ -38,6 +41,9 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/report" element={<NewReport />} />
                 <Route path="/r/:code" element={<ReportPage />} />
                 <Route path="/mine" element={<MyReports />} />
+                <Route path="/map" element={<MapPage />} />
+                <Route path="/reports" element={<ListPage />} />
+                <Route path="/wards" element={<Wards />} />
                 <Route path="/about" element={<Static.About />} />
                 <Route path="/privacy" element={<Static.Privacy />} />
                 <Route path="/accessibility" element={<Static.Accessibility />} />
