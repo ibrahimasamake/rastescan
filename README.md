@@ -11,7 +11,7 @@ into one ticket, and a crew's after-photo is inspected again before the ticket i
 | Web app + Android app | React + Vite (`web/`), wrapped with Capacitor for the Play internal testing track (`web/android`) |
 | Backend | Python FastAPI, SQLite, Pillow, OpenCV (privacy blur) (`backend/`) |
 | AI in production | Amazon Nova on Amazon Bedrock, called with the EC2 IAM role (no keys in code) |
-| Hosting | EC2 t4g.small behind CloudFront, photos in S3 (`deploy/`, `docs/aws-setup.md`) |
+| Hosting | EC2 t4g.small behind CloudFront, photos in S3; created by Terraform, configured by Ansible (`infra/`, `docs/aws-setup.md`) |
 | Dev tooling | Claude Code helps write the code; it is not part of the running app |
 
 ## Run it on your laptop
@@ -45,9 +45,18 @@ web/src/           React app: pages/Report.tsx (citizen), pages/Dashboard.tsx (w
 web/android/       Capacitor Android project
 prompts/           Inspection prompt sent to Nova
 scripts/evaluate.py  Accuracy check on labelled photos in test-photos/
-deploy/            EC2 setup script, systemd unit, IAM policy
+infra/terraform/   AWS: EC2, Elastic IP, CloudFront, S3, IAM role, budget
+infra/ansible/     Server setup and app deploy (site.yml)
 docs/              design.html, aws-setup.md, android.md
 ```
+
+## Deploy
+```bash
+cd infra
+make up        # first time: create AWS resources and deploy
+make deploy    # later: send new code to the server
+```
+Details in `docs/aws-setup.md`.
 
 ## API
 | Method | Path | What it does |

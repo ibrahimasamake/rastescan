@@ -23,3 +23,10 @@ uploads/
 backend/data/
 !.env.example
 !web/.env.android
+# terraform / ansible
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+infra/ansible/inventory/hosts.ini

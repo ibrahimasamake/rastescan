@@ -37,3 +37,25 @@ jobs:
       - run: npx eslint .
       - run: npx tsc -b
       - run: npx vite build
+
+  infra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+      - run: terraform -chdir=infra/terraform fmt -check -recursive
+      - run: terraform -chdir=infra/terraform init -backend=false -input=false
+      - run: terraform -chdir=infra/terraform validate
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ansible ansible-lint
+      - name: ansible-lint and syntax check
+        working-directory: infra/ansible
+        run: |
+          cp inventory/hosts.ini.example inventory/hosts.ini
+          ansible-galaxy collection install -r requirements.yml
+          ansible-lint site.yml
+          RASTESCAN_DASHBOARD_PIN=0000 ansible-playbook --syntax-check site.yml

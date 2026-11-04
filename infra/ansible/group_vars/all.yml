@@ -1,0 +1,9 @@
+app_user: rastescan
+app_dir: /opt/rastescan
+data_dir: /var/lib/rastescan
+repo_root: "{{ playbook_dir }}/../.."
+ai_mode: bedrock
+max_upload_mb: 8
+reports_per_hour: 30
+# Read from your shell so it never lands in git: export RASTESCAN_DASHBOARD_PIN=...
+dashboard_pin: "{{ lookup('env', 'RASTESCAN_DASHBOARD_PIN') }}"

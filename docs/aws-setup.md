@@ -1,67 +1,80 @@
-# AWS setup (about 1 hour)
+# Deploy to AWS with Terraform and Ansible
 
-Everything in **Asia Pacific (Mumbai) ap-south-1** unless Nova is not offered there for your account; then use the
-region Bedrock shows it in and set `AWS_REGION` and `BEDROCK_MODEL_ID` to match.
+Terraform creates the AWS resources. Ansible sets up the server and deploys the app from your checkout.
+The only manual step is your own AWS login.
 
-## 1. Protect the credit (5 min)
-Billing → Budgets → Create budget → Monthly cost budget of $50 with alerts at $10, $25 and $40 to your email.
+## What gets created (Mumbai, ap-south-1)
+| Resource | Why |
+|---|---|
+| EC2 t4g.small, Ubuntu 24.04 ARM, 20 GB encrypted disk, IMDSv2 only | Runs the API and serves the web app |
+| Elastic IP | Fixed address for CloudFront and SSH |
+| Security group | SSH only from your IP; port 8000 only from CloudFront |
+| CloudFront distribution | Free HTTPS address (phones need it for camera and GPS) |
+| S3 bucket (private, encrypted) | Blurred photos |
+| IAM role and instance profile | Lets the server call Nova and S3 without any keys |
+| AWS Budget ($50, alerts at 20%, 50%, 80%) | Email before the credit runs out |
 
-## 2. Turn on Amazon Nova in Bedrock (5 min)
-Bedrock console → Model access (or Model catalog) → enable **Nova Pro** and **Nova Lite**.
-Note the **inference profile id** shown for Nova Pro (for Mumbai it looks like `apac.amazon.nova-pro-v1:0`).
+About $20 a month while running. `make down` deletes all of it.
 
-## 3. S3 bucket for photos (3 min)
-S3 → Create bucket → name e.g. `rastescan-photos-<yourname>` → keep "Block all public access" ON.
+## One-time setup on your laptop
+1. Install Terraform 1.6+, Ansible (`pip install ansible`), Node 20+, rsync and the AWS CLI.
+2. Log in to AWS with a user allowed to create the resources above (an admin IAM user is simplest on a student account):
+   ```bash
+   aws configure
+   ```
+   Use region `ap-south-1`.
+3. Create an SSH key if you don't have one:
+   ```bash
+   ssh-keygen -t ed25519
+   ```
+4. Fill in the settings:
+   ```bash
+   cd infra/terraform
+   cp terraform.tfvars.example terraform.tfvars
+   ```
+   Set `ssh_allowed_cidr` to your IP with `/32` (find it with `curl -s https://checkip.amazonaws.com`) and `budget_email`.
+5. Choose the ward dashboard PIN. It stays in your shell, never in git:
+   ```bash
+   export RASTESCAN_DASHBOARD_PIN=<at least 4 digits>
+   ```
 
-## 4. IAM role for the server (5 min)
-IAM → Policies → Create → JSON → paste `deploy/iam-policy.json` with your bucket name → name `rastescan-server`.
-IAM → Roles → Create → AWS service: EC2 → attach `rastescan-server` → name `rastescan-ec2`.
-The app never needs AWS keys; it uses this role.
-
-## 5. Access to this private repo from the server (3 min)
-Easiest: GitHub → Settings → Developer settings → Fine-grained tokens → token with **read-only Contents** on
-`rastescan` only. Clone with `https://<token>@github.com/ibrahimasamake/rastescan.git`.
-
-## 6. EC2 instance (10 min)
-EC2 → Launch instance:
-- Ubuntu Server 24.04, **64-bit (Arm)**, type **t4g.small**, 20 GB gp3 disk
-- Key pair: create one, keep the .pem file safe (never commit it)
-- Security group: SSH (22) from **My IP**; Custom TCP **8000** from the CloudFront prefix list
-  `com.amazonaws.global.cloudfront.origin-facing` (choose "Prefix list" as source)
-- Advanced → IAM instance profile: `rastescan-ec2`
-
-Then:
+## Create and deploy
 ```bash
-ssh -i rastescan.pem ubuntu@<public-ip>
-git clone https://<token>@github.com/ibrahimasamake/rastescan.git /tmp/r && bash /tmp/r/deploy/setup-ec2.sh https://<token>@github.com/ibrahimasamake/rastescan.git
-sudo nano /etc/rastescan.env      # set S3_BUCKET, DASHBOARD_PIN, BEDROCK_MODEL_ID, AWS_REGION
-sudo systemctl restart rastescan
-curl localhost:8000/api/health    # should say "ai_mode":"bedrock"
+cd infra
+make up
+```
+Terraform shows what it will create and asks you to type `yes`. Ansible then:
+1. builds the web app on your laptop,
+2. copies it with the backend and prompt to the server,
+3. installs Python packages and the system service,
+4. checks the app runs in Bedrock mode, not test mode,
+5. waits until the HTTPS address answers (the first CloudFront deploy takes 10–15 minutes),
+6. prints the address.
+
+## Everyday commands (run in `infra/`)
+| Command | What it does |
+|---|---|
+| `make deploy` | Send your current code to the server and restart |
+| `make url` | Print the HTTPS address (put it in `web/.env.android`) |
+| `make ssh` | Log in to the server; `journalctl -u rastescan -f` shows the logs |
+| `make infra` | Apply Terraform changes only |
+| `make down` | Delete everything, photos included |
+| `make check` | Format and lint checks, no AWS needed |
+
+If your IP changes (new Wi-Fi), update `ssh_allowed_cidr` and run `make infra` before `make deploy`.
+
+## Bedrock access
+The server role is allowed to call Amazon Nova. If the first report fails with an access error, open the Bedrock
+console in ap-south-1, enable Nova Pro and Nova Lite, and try again.
+To switch to Nova Lite, set `bedrock_model_id = "apac.amazon.nova-lite-v1:0"` in `terraform.tfvars`, then:
+```bash
+make infra deploy
 ```
 
-## 7. CloudFront for HTTPS (10 min + up to 15 min to deploy)
-CloudFront → Create distribution:
-- Origin domain: the instance's **Public IPv4 DNS** (ec2-…compute.amazonaws.com), protocol **HTTP only**, port **8000**
-- Viewer protocol policy: **Redirect HTTP to HTTPS**
-- Allowed methods: **GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE**
-- Cache policy: **CachingDisabled**; Origin request policy: **AllViewerExceptHostHeader**
-- Response timeout: 60 seconds (the AI can take a few seconds)
-
-The address looks like `https://d1234abcd.cloudfront.net`. Open it on your phone over mobile data and send a report.
-Put this address in `web/.env.android` for the Android build.
-
-## 8. Check the AI before the expo
-Put 20–30 labelled photos in `test-photos/` with `labels.csv`, then on the server:
+## Check the AI before the expo
+Put 20–30 labelled photos in `test-photos/` with `labels.csv`, then run the evaluation from your laptop with your
+own AWS login:
 ```bash
-cd /opt/rastescan && sudo -u rastescan env $(cat /etc/rastescan.env | xargs) backend/.venv/bin/python scripts/evaluate.py
+cd backend
+AWS_REGION=ap-south-1 BEDROCK_MODEL_ID=apac.amazon.nova-pro-v1:0 .venv/bin/python ../scripts/evaluate.py
 ```
-Try `apac.amazon.nova-lite-v1:0` too; keep Lite if it scores the same.
-
-## Updating after a push to main
-```bash
-bash /opt/rastescan/deploy/update.sh
-```
-
-## Avoid (each one alone can use most of the credit)
-NAT gateway, Application Load Balancer, RDS, SageMaker endpoints, an Elastic IP left unattached.
-Stop the instance after the expo.
