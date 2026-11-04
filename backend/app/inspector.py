@@ -232,6 +232,57 @@ class OllamaInspector(_HttpInspector):
         return resp.json()["message"]["content"] or ""
 
 
+class YoloInspector:
+    """The road-damage detector in services/yolo. It finds potholes and cracks and their boxes, fast, with no rate limit.
+
+    It cannot measure depth or read the scene, so severity is estimated from how much of the photo each defect covers.
+    It does not know open manholes, waterlogging or debris.
+    """
+
+    mode = "yolo"
+
+    def __init__(self, url: str, timeout_s: float = 60):
+        import httpx
+
+        self.url = url.rstrip("/")
+        self.model = "rdd2022-yolov8m"
+        self.http = httpx.Client(timeout=timeout_s)
+
+    @staticmethod
+    def to_detection(d: dict) -> Detection | None:
+        label = d["label"].lower()
+        b = d["box"]
+        area = max(0, b["ymax"] - b["ymin"]) * max(0, b["xmax"] - b["xmin"]) / 1_000_000  # share of the photo, 0-1
+        if "pothole" in label:
+            hazard, severity = "Pothole", min(9.5, 3.0 + 14 * area ** 0.5)
+            depth = "Deep" if severity >= 8 else "Moderate" if severity >= 5 else "Shallow"
+            rec = "Cut out loose material, apply tack coat, patch with hot-mix or cold-mix asphalt and compact."
+            hours = 3 if severity >= 7 else 2
+        elif "crack" in label:
+            hazard, severity = "Road Fissure", min(6.9, 2.0 + 8 * area ** 0.5)
+            depth, rec, hours = "Shallow", "Clean, rout and seal the cracks with hot-poured bitumen sealant.", 1
+        else:
+            return None
+        severity = max(1.0, round(severity, 1))
+        return Detection.model_validate({
+            "hazard_type": hazard, "confidence": min(1.0, d["confidence"]), "severity_score": severity,
+            "urgency_level": "LOW", "repair_recommendation": rec, "estimated_repair_time_hours": hours,
+            "estimated_dimensions": {"width_cm": 0, "depth_category": depth}, "bounding_box": b,
+        })
+
+    def inspect(self, jpeg: bytes) -> Inspection:
+        resp = self.http.post(f"{self.url}/detect", files={"photo": ("photo.jpg", jpeg, "image/jpeg")})
+        resp.raise_for_status()
+        found = [d for d in (self.to_detection(x) for x in resp.json()["detections"]) if d]
+        if not found:
+            return parse_inspection(json.dumps({"detections": [{
+                "hazard_type": "None", "confidence": 0.65, "severity_score": 1.0, "urgency_level": "LOW",
+                "repair_recommendation": "No pothole or crack found.", "estimated_repair_time_hours": 0,
+                "estimated_dimensions": {"width_cm": 0, "depth_category": "Shallow"},
+                "bounding_box": {"ymin": 0, "xmin": 0, "ymax": 0, "xmax": 0}}]}))
+        return combine(found)
+
+
 _FAKE_RESULTS = [
     {"hazard_type": "Pothole", "confidence": 0.9, "severity_score": 7.6, "urgency_level": "HIGH",
      "repair_recommendation": "Saw-cut, tack coat, hot-mix asphalt patch with roller compaction.",
@@ -281,6 +332,8 @@ def build_inspector(settings, provider: str, model: str | None = None) -> Inspec
     """One inspector for a provider and (optionally) a specific model; used at start-up and by the admin Model lab."""
     if provider == "fake":
         return FakeInspector()
+    if provider == "yolo":
+        return YoloInspector(settings.yolo_url)
     prompt = load_prompt(settings.prompt_file)
     if provider == "bedrock":
         return BedrockInspector(model or settings.bedrock_model_id, settings.bedrock_region, prompt)
@@ -288,7 +341,7 @@ def build_inspector(settings, provider: str, model: str | None = None) -> Inspec
         return GroqInspector(settings.groq_api_key, model or settings.groq_model, prompt)
     if provider == "ollama":
         return OllamaInspector(settings.ollama_url, model or settings.ollama_model, prompt)
-    raise ValueError(f"Unknown AI_MODE {provider!r}; use bedrock, groq, ollama or fake")
+    raise ValueError(f"Unknown AI_MODE {provider!r}; use bedrock, groq, ollama, yolo or fake")
 
 
 def make_inspector(settings) -> Inspector:

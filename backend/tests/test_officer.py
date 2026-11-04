@@ -213,7 +213,7 @@ def test_model_lab_is_admin_only_and_tests_a_model_without_touching_reports(offi
     h = login(c)
     listing = c.get("/api/v2/admin/models", headers=h).json()
     ids = {m["id"] for m in listing["models"]}
-    assert "fake:sample" in ids and "yolo:road" in ids and any(m["provider"] == "ollama" for m in listing["models"])
+    assert "fake:sample" in ids and "yolo:rdd2022-yolov8m" in ids and any(m["provider"] == "ollama" for m in listing["models"])
     r = c.post("/api/v2/admin/models/test", headers=h, data={"provider": "fake", "model": ""},
                files={"photo": ("p.jpg", photo_bytes(3), "image/jpeg")}).json()
     assert r["ok"] and r["result"]["hazard_type"] and r["seconds"] >= 0

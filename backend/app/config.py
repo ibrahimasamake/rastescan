@@ -27,6 +27,8 @@ class Settings:
     groq_model: str = field(default_factory=lambda: _env("GROQ_MODEL", "qwen/qwen3.8-27b"))
     ollama_url: str = field(default_factory=lambda: _env("OLLAMA_URL", "http://localhost:11434"))
     ollama_model: str = field(default_factory=lambda: _env("OLLAMA_MODEL", "qwen2.5vl:7b"))
+    # The separate YOLO road-damage detector (services/yolo).
+    yolo_url: str = field(default_factory=lambda: _env("YOLO_URL", "http://localhost:8020"))
     s3_bucket: str = field(default_factory=lambda: _env("S3_BUCKET"))
     data_dir: Path = field(default_factory=lambda: Path(_env("DATA_DIR", str(REPO_ROOT / "backend" / "data"))))
     web_dist: Path = field(default_factory=lambda: Path(_env("WEB_DIST", str(REPO_ROOT / "web" / "dist"))))

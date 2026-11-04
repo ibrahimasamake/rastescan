@@ -2,7 +2,7 @@
 PY := backend/.venv/bin/python
 DATA ?= backend/data
 
-.PHONY: setup api web test seed-demo unseed-demo evaluate android
+.PHONY: setup api web test seed-demo unseed-demo evaluate android yolo-setup yolo-weights yolo
 
 setup: ## Install backend and web dependencies
 	cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
@@ -30,3 +30,12 @@ evaluate: ## Compare AI providers on test-photos/ (PROVIDERS=groq,ollama PAUSE=2
 
 android: ## Build the web app for Android and copy it into web/android (then open it in Android Studio)
 	cd web && npm run build:android
+
+yolo-setup: ## Install the YOLO road-damage detector's own environment (services/yolo/.venv; large: installs torch)
+	cd services/yolo && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+
+yolo-weights: ## Download the road-damage weights (about 50 MB, AGPL-3.0) from Hugging Face
+	cd services/yolo && .venv/bin/python download_weights.py
+
+yolo: ## Run the detector on :8020 (then AI_MODE=yolo for the main app, or pick it in the admin Model lab)
+	cd services/yolo && .venv/bin/uvicorn app:app --port 8020

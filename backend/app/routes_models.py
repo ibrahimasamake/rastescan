@@ -101,9 +101,18 @@ def list_models(officer: auth.Officer = Depends(require_admin), ctx: Ctx = Depen
                    "note": "Needs AWS access to Bedrock.", "pull": None})
     models.append({"id": "fake:sample", "provider": "fake", "model": "", "label": "Sample answers (no AI)", "installed": True,
                    "runnable": True, "size_gb": None, "note": "Canned results for testing the screens.", "pull": None})
-    models.append({"id": "yolo:road", "provider": "yolo", "model": "", "label": "YOLO road-damage detector", "installed": False,
-                   "runnable": False, "size_gb": None, "pull": None,
-                   "note": "Fast box detector for potholes and cracks. Not installed: it would run as a separate service."})
+    yolo_up, yolo_has_weights = False, False
+    try:
+        h = httpx.get(s.yolo_url.rstrip("/") + "/health", timeout=2).json()
+        yolo_up, yolo_has_weights = True, bool(h.get("weights"))
+    except Exception:  # noqa: BLE001 - not running
+        pass
+    models.append({"id": "yolo:rdd2022-yolov8m", "provider": "yolo", "model": "rdd2022-yolov8m",
+                   "label": "YOLO road-damage detector", "installed": yolo_up and yolo_has_weights,
+                   "runnable": yolo_up and yolo_has_weights, "size_gb": 0.05, "pull": None,
+                   "note": ("Finds potholes and cracks with boxes in under a second. Severity is estimated from size; it does not know "
+                            "manholes, water or debris. AGPL-3.0 weights." if yolo_up and yolo_has_weights else
+                            "Not running. Set up once: make yolo-setup && make yolo-weights, then start it with: make yolo")})
     for m in models:
         m["pull_state"] = ctx.pulls.get(m["model"]) if m["provider"] == "ollama" else None
         m["live"] = m["provider"] == live["provider"] and (m["model"] == live["model"] or not live["model"])
