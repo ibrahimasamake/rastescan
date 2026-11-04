@@ -63,6 +63,24 @@ Terraform shows what it will create and asks you to type `yes`. Ansible then:
 
 If your IP changes (new Wi-Fi), update `ssh_allowed_cidr` and run `make infra` before `make deploy`.
 
+## If your AWS account blocks a region
+Accounts inside an AWS Organization (college or training accounts) can have a service control policy (SCP) that
+denies whole regions. The error says `explicit deny in a service control policy`. Only the organization's admins can
+change that, so pick an allowed region instead. Stockholm works for this project:
+```hcl
+region           = "eu-north-1"
+bedrock_model_id = "eu.amazon.nova-pro-v1:0"
+```
+Before `make up`, check the global services and one real Nova call (the `eu.` profile can send requests to other EU
+regions, and the SCP may block those):
+```bash
+aws cloudfront list-cache-policies --type managed --max-items 1
+aws budgets describe-budgets --account-id $(aws sts get-caller-identity --query Account --output text)
+aws bedrock-runtime converse --region eu-north-1 --model-id eu.amazon.nova-pro-v1:0 \
+  --messages '[{"role":"user","content":[{"text":"Reply with OK"}]}]'
+```
+If only the Budgets call is denied, set `create_budget = false`.
+
 ## Bedrock access
 The server role is allowed to call Amazon Nova. If the first report fails with an access error, open the Bedrock
 console in ap-south-1, enable Nova Pro and Nova Lite, and try again.

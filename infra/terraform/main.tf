@@ -214,6 +214,7 @@ resource "aws_cloudfront_distribution" "app" {
 
 # ---------- spending guard ----------
 resource "aws_budgets_budget" "monthly" {
+  count        = var.create_budget ? 1 : 0
   name         = "${local.name}-monthly"
   budget_type  = "COST"
   limit_amount = tostring(var.budget_limit_usd)

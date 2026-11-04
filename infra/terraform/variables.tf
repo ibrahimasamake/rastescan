@@ -41,3 +41,9 @@ variable "budget_limit_usd" {
   type        = number
   default     = 50
 }
+
+variable "create_budget" {
+  description = "Create the AWS Budgets alert. Set false if your organization blocks the Budgets API."
+  type        = bool
+  default     = true
+}

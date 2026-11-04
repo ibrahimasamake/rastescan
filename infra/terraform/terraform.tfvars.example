@@ -3,3 +3,8 @@ ssh_allowed_cidr = "203.0.113.7/32"   # your IP: curl -s https://checkip.amazona
 budget_email     = "team@example.com"
 # ssh_public_key_path = "~/.ssh/id_ed25519.pub"
 # bedrock_model_id    = "apac.amazon.nova-lite-v1:0"
+
+# If your AWS Organization blocks ap-south-1 (error mentions a "service control policy"), use Stockholm:
+# region           = "eu-north-1"
+# bedrock_model_id = "eu.amazon.nova-pro-v1:0"
+# create_budget    = false   # only if the Budgets API is also blocked
