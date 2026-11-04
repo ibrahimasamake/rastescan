@@ -20,7 +20,7 @@ export function UrgencyBadge({ urgency, big = false }: { urgency: Urgency; big?:
 
 export function StatusBadge({ status, big = false }: { status: PublicStatus; big?: boolean }) {
   const { t } = useI18n();
-  const label = status === "resolved" && big ? t("status.resolvedVerified") : t(`status.${status}` as Key);
+  const label = t(`status.${status}` as Key);
   return (
     <span className={`badge s-${status} ${big ? "big" : ""}`}>
       <Icon name={STATUS_ICON[status] ?? "dot"} size={big ? 18 : 14} />

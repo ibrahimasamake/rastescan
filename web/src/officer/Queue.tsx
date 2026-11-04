@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { officerApi, URGENCIES, type Report, type Status } from "../api";
 import { StatusBadge, UrgencyBadge } from "../components/Badges";
+import { Modal } from "../components/Modal";
 import { Empty, ErrorBox, Skeleton, Toast, useAsync, useToast } from "../components/States";
 import { CLOSED, ago, hazardLabel, sla, urgencyLabel } from "../format";
 import { useI18n } from "../i18n";
@@ -150,19 +151,21 @@ function QueueBody() {
       {queue.loading && !d && <Skeleton h={300} />}
       {!!queue.error && !d && <ErrorBox error={queue.error} retry={queue.reload} />}
       {d && (
-        <div className="split">
-          <div className="section">
-            {d.tickets.length === 0 ? <Empty>{t("officer.emptyQueue")}</Empty> : view === "list" ? (
+        <div className="section">
+          {d.tickets.length === 0 ? <Empty>{t("officer.emptyQueue")}</Empty> : view === "list" ? (
+            <>
+              <p className="small muted">{t("officer.selectHint")}</p>
               <QueueTable rows={d.tickets} selected={selected} onSelect={setSelected} checked={checked} setChecked={setChecked} />
-            ) : (
-              <Suspense fallback={<Skeleton h={400} />}><MapView reports={d.tickets} /></Suspense>
-            )}
-          </div>
-          <div className="sticky">
-            {selected ? <ReportPanel key={selected} code={selected} assignees={assignees.data ?? []} onChange={reloadAll} />
-              : <Empty>{t("officer.selectHint")}</Empty>}
-          </div>
+            </>
+          ) : (
+            <Suspense fallback={<Skeleton h={400} />}><MapView reports={d.tickets} /></Suspense>
+          )}
         </div>
+      )}
+      {selected && (
+        <Modal title={selected} onClose={() => setSelected(null)}>
+          <ReportPanel key={selected} code={selected} assignees={assignees.data ?? []} onChange={reloadAll} />
+        </Modal>
       )}
       <Toast msg={toast} />
     </>

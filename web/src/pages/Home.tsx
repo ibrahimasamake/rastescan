@@ -38,7 +38,7 @@ export default function Home() {
   const { t, num } = useI18n();
   const { stats } = usePortal();
   const open = useAsync(() => api.reports({ status: "open", per_page: 300, sort: "urgency" }), [], 60000);
-  const resolved = useAsync(() => api.recentlyResolved(), [], 60000);
+  const resolved = useAsync(() => api.recentlyResolved(), [], 30000);
   const wards = useAsync(() => api.wards(), []);
   const s = stats;
   return (

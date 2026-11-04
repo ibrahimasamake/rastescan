@@ -159,8 +159,8 @@ def wards(request: Request, ctx: Ctx = Depends(get_ctx)):
 @router.get("/recently-resolved")
 def recently_resolved(request: Request, limit: int = Query(8, ge=1, le=30), ctx: Ctx = Depends(get_ctx)):
     rows = ctx.db.query(svc.COUNTS_SQL + " WHERE r.parent_id IS NULL AND r.status = 'verified' "
-                        "AND r.after_photo_key IS NOT NULL ORDER BY r.resolved_at DESC LIMIT ?", (limit,))
-    return cached_json(request, [svc.public_item(ctx, r) for r in rows], max_age=60)
+                        "ORDER BY r.resolved_at DESC LIMIT ?", (limit,))
+    return cached_json(request, [svc.public_item(ctx, r) for r in rows], max_age=15)
 
 
 CSV_FIELDS = ["code", "created_at", "ward_code", "ward_name", "hazard_type", "severity", "urgency", "public_status",

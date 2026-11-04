@@ -167,3 +167,19 @@ def test_admin_export_has_note_but_no_private_contact(officer_client):
 def test_secret_key_file_is_created_outside_git(officer_client):
     ctx = officer_client.app.state.ctx
     assert (ctx.settings.data_dir / "secret.key").is_file()
+
+
+def test_officer_can_resolve_after_ai_still_sees_damage_and_it_shows_as_recently_resolved(officer_client, inspector):
+    c = officer_client
+    h = login(c)
+    code = submit(c)["code"]
+    inspector.result = make_result(severity=6.2, urgency="MEDIUM")  # AI still sees damage in the repair photo
+    c.post(f"/api/v2/officer/reports/{code}/repair-photo", files={"photo": ("a.jpg", photo_bytes(50), "image/jpeg")}, headers=h)
+    assert c.get("/api/public/recently-resolved").json() == []
+    done = c.post(f"/api/v2/officer/reports/{code}/status", json={"status": "verified"}, headers=h).json()
+    assert done["public_status"] == "resolved"
+    assert [r["code"] for r in c.get("/api/public/recently-resolved").json()] == [code]
+    # Resolving with no photo at all also counts
+    other = submit(c, seed=7, lat=13.2)["code"]
+    c.post(f"/api/v2/officer/reports/{other}/status", json={"status": "verified"}, headers=h)
+    assert other in [r["code"] for r in c.get("/api/public/recently-resolved").json()]

@@ -9,6 +9,9 @@ import { useI18n } from "../i18n";
 import type { Key } from "../i18n/en";
 import { shrinkPhoto } from "../photo";
 
+/** Dismiss reasons are shown to the public, so they are stored in English whatever language the officer uses. */
+const WHY_EN = { notRoad: "Not a road problem", duplicate: "Duplicate report", private: "Private road", cantFind: "Could not find the place" } as const;
+
 /** Everything an officer can do to one report. Every action is written to the public history. */
 export function ReportPanel({ code, assignees, onChange }: { code: string; assignees: string[]; onChange: () => void }) {
   const { t, num, date } = useI18n();
@@ -16,12 +19,14 @@ export function ReportPanel({ code, assignees, onChange }: { code: string; assig
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [toast, show] = useToast();
-  const [assignee, setAssignee] = useState("");
   const [reason, setReason] = useState("");
   const [comment, setComment] = useState("");
   const [mergeInto, setMergeInto] = useState("");
   const [hazard, setHazard] = useState("");
   const [severity, setSeverity] = useState("");
+  const [stillDamaged, setStillDamaged] = useState<string | null>(null);
+  const me = useAsync(() => officerApi.me(), []);
+  const myName = me.data?.name;
   const fileRef = useRef<HTMLInputElement>(null);
 
   if (loading && !r) return <Skeleton h={400} />;
@@ -71,85 +76,131 @@ export function ReportPanel({ code, assignees, onChange }: { code: string; assig
       <p className="rec small" lang="en">{res.repair_recommendation}</p>
       {err && <p className="error-text" role="alert">{err}</p>}
 
-      {(r.status === "review" || open) && (
-        <fieldset className="card pad section" disabled={busy}>
-          <legend className="label">{r.status === "review" ? t("officer.confirmLead") : t("officer.confirm")}</legend>
+      {r.status === "review" && (
+        <div className="card pad section">
+          <p className="label">{t("officer.confirmLead")}</p>
           <p className="small muted">{r.ai_pending ? t("officer.aiBusy") : t("officer.aiSaid", { hazard: hazardLabel(t, res.hazard_type), severity: res.severity_score.toFixed(1), confidence: Math.round(r.confidence * 100) })}</p>
-          <div className="filters">
-            <div className="field">
-              <label htmlFor="rv-h">{t("report.hazard")}</label>
-              <select id="rv-h" className="input" value={hazard || (r.hazard_type === "None" ? "" : r.hazard_type)} onChange={(e) => setHazard(e.target.value)}>
-                <option value="" disabled>–</option>
-                {HAZARDS.map((h) => <option key={h} value={h}>{hazardLabel(t, h)}</option>)}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="rv-s">{t("report.severity")} (1–10)</label>
-              <input id="rv-s" className="input" type="number" min={1} max={10} step={0.1} value={severity || String(r.severity)} onChange={(e) => setSeverity(e.target.value)} />
-            </div>
-            <button className="btn small" onClick={() => act(() => officerApi.review(r.code, hazard || r.hazard_type, Number(severity || r.severity)))}
-              disabled={!(hazard || r.hazard_type !== "None")}>{t("officer.confirm")}</button>
+          <div className="btn-row">
+            <button className="btn" disabled={busy || r.ai_pending || r.hazard_type === "None"} onClick={() => act(() => officerApi.review(r.code, r.hazard_type, r.severity))}>{t("officer.looksRight")}</button>
+            <button className="btn outline" disabled={busy} onClick={() => status("dismissed", "Not a road problem")}>{t("officer.notRoad")}</button>
           </div>
-        </fieldset>
+          <details>
+            <summary className="label">{t("officer.changeAi")}</summary>
+            <div className="filters" style={{ marginTop: 10 }}>
+              <div className="field">
+                <label htmlFor="rv-h">{t("report.hazard")}</label>
+                <select id="rv-h" className="input" value={hazard || (r.hazard_type === "None" ? "" : r.hazard_type)} onChange={(e) => setHazard(e.target.value)}>
+                  <option value="" disabled>–</option>
+                  {HAZARDS.map((h) => <option key={h} value={h}>{hazardLabel(t, h)}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="rv-s">{t("report.severity")} (1–10)</label>
+                <input id="rv-s" className="input" type="number" min={1} max={10} step={0.1} value={severity || String(r.severity)} onChange={(e) => setSeverity(e.target.value)} />
+              </div>
+              <button className="btn small" disabled={busy || !(hazard || r.hazard_type !== "None")}
+                onClick={() => act(() => officerApi.review(r.code, hazard || r.hazard_type, Number(severity || r.severity)))}>{t("officer.confirm")}</button>
+            </div>
+          </details>
+        </div>
       )}
 
       {open && (
-        <fieldset className="section" disabled={busy} style={{ border: 0, padding: 0, margin: 0 }}>
-          <div className="filters">
-            <div className="field">
-              <label htmlFor="assignee">{t("officer.assignTo")}</label>
-              <input id="assignee" className="input" list="assignee-list" value={assignee} onChange={(e) => setAssignee(e.target.value)} placeholder={r.assignee ?? ""} />
-              <datalist id="assignee-list">{assignees.map((a) => <option key={a} value={a} />)}</datalist>
-            </div>
-            <button className="btn small" disabled={assignee.trim().length < 2} onClick={async () => { if (await act(() => officerApi.assign(r.code, assignee.trim()))) setAssignee(""); }}>{t("officer.assign")}</button>
-          </div>
+        <div className="section">
           <div className="btn-row">
-            {r.status !== "fixed" && <button className="btn outline small" onClick={() => status("fixed")}>{t("officer.markFixed")}</button>}
-            <button className="btn accent small" onClick={() => fileRef.current?.click()}>{t("officer.uploadRepair")}</button>
-            <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden aria-label={t("officer.uploadRepair")}
+            {myName && r.assignee !== myName && (
+              <button className="btn small" disabled={busy} onClick={() => act(() => officerApi.assign(r.code, myName))}>{t("officer.assignMe")}</button>
+            )}
+            <select className="input" style={{ width: "auto" }} disabled={busy} aria-label={t("officer.assignTo")} value=""
+              onChange={(e) => {
+                const v = e.target.value === "__new" ? window.prompt(t("officer.assignNew"))?.trim() ?? "" : e.target.value;
+                if (v.length >= 2) act(() => officerApi.assign(r.code, v));
+              }}>
+              <option value="">{t("officer.assignOther")}</option>
+              {assignees.filter((a) => a !== r.assignee).map((a) => <option key={a} value={a}>{a}</option>)}
+              <option value="__new">{t("officer.assignNew")}</option>
+            </select>
+          </div>
+
+          <div className="btn-row">
+            <button className="btn accent" disabled={busy} onClick={() => fileRef.current?.click()}>{t("officer.repairDone")}</button>
+            <button className="btn outline small" disabled={busy} onClick={() => { setStillDamaged(null); status("verified"); }}>{t("officer.resolveNoPhoto")}</button>
+            <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden aria-label={t("officer.repairDone")}
               onChange={async (e) => {
                 const f = e.target.files?.[0];
                 e.target.value = "";
                 if (!f) return;
                 let outcome = t("officer.repairResult");
+                setStillDamaged(null);
                 await act(async () => {
                   const after = await officerApi.repairPhoto(r.code, await shrinkPhoto(f));
                   const a = after.after_result;
-                  outcome = after.public_status === "resolved" ? `${t("status.resolved")}: ${t("report.afterClean")}`
-                    : a ? t("report.afterStill", { hazard: hazardLabel(t, a.hazard_type).toLowerCase(), n: a.severity_score.toFixed(1) }) : outcome;
+                  if (after.public_status === "resolved") outcome = `${t("status.resolved")}: ${t("report.afterClean")}`;
+                  else if (a) setStillDamaged(t("officer.stillDamaged", { hazard: hazardLabel(t, a.hazard_type).toLowerCase(), n: a.severity_score.toFixed(1) }));
                 }, undefined);
                 show(outcome);
               }} />
           </div>
+
+          {stillDamaged && (
+            <div className="card pad notice" role="alert">
+              <p>{stillDamaged}</p>
+              <div className="btn-row">
+                <button className="btn small" disabled={busy} onClick={() => { setStillDamaged(null); status("verified"); }}>{t("officer.resolveAnyway")}</button>
+                <button className="btn outline small" disabled={busy} onClick={() => fileRef.current?.click()}>{t("officer.tryAnother")}</button>
+              </div>
+            </div>
+          )}
+
           <div className="field">
-            <label htmlFor="dismiss">{t("officer.dismissReason")}</label>
-            <input id="dismiss" className="input" value={reason} onChange={(e) => setReason(e.target.value)} />
+            <span className="label">{t("officer.dismissWhy")}</span>
+            <div className="btn-row">
+              {(["notRoad", "duplicate", "private", "cantFind"] as const).map((k) => (
+                <button key={k} className="btn danger small" disabled={busy}
+                  onClick={() => window.confirm(`${t("officer.dismiss")}: ${t(`officer.why.${k}` as Key)}?`) && status("dismissed", WHY_EN[k])}>{t(`officer.why.${k}` as Key)}</button>
+              ))}
+            </div>
           </div>
-          <button className="btn danger small" style={{ alignSelf: "start" }} disabled={reason.trim().length < 3} onClick={() => status("dismissed", reason.trim())}>{t("officer.dismiss")}</button>
-        </fieldset>
+        </div>
       )}
       {!open && <button className="btn outline small" style={{ alignSelf: "start" }} disabled={busy} onClick={() => status("new")}>{t("officer.reopen")}</button>}
 
-      <div className="field">
-        <label htmlFor="comment">{t("officer.comment")}</label>
-        <textarea id="comment" className="input" maxLength={1000} value={comment} onChange={(e) => setComment(e.target.value)} />
-      </div>
-      <button className="btn outline small" style={{ alignSelf: "start" }} disabled={busy || comment.trim().length < 2}
-        onClick={async () => { if (await act(() => officerApi.comment(r.code, comment.trim()))) setComment(""); }}>{t("officer.post")}</button>
-
-      <div className="filters">
-        {r.merged_into ? (
-          <button className="btn ghost small" disabled={busy} onClick={() => act(() => officerApi.unmerge(r.code))}>{t("officer.unmerge", { code: r.merged_into })}</button>
-        ) : (
-          <>
-            <div className="field">
-              <label htmlFor="merge">{t("officer.mergeInto")}</label>
-              <input id="merge" className="input" placeholder="RS-0000" value={mergeInto} onChange={(e) => setMergeInto(e.target.value.toUpperCase())} />
+      <details>
+        <summary className="label">{t("officer.more")}</summary>
+        <div className="section" style={{ marginTop: 12 }}>
+          {open && r.status !== "fixed" && r.status !== "review" && (
+            <button className="btn outline small" style={{ alignSelf: "start" }} disabled={busy} onClick={() => status("fixed")}>{t("officer.markFixed")}</button>
+          )}
+          <div className="field">
+            <label htmlFor="comment">{t("officer.comment")}</label>
+            <textarea id="comment" className="input" maxLength={1000} value={comment} onChange={(e) => setComment(e.target.value)} />
+          </div>
+          <button className="btn outline small" style={{ alignSelf: "start" }} disabled={busy || comment.trim().length < 2}
+            onClick={async () => { if (await act(() => officerApi.comment(r.code, comment.trim()))) setComment(""); }}>{t("officer.post")}</button>
+          {open && (
+            <div className="filters">
+              <div className="field">
+                <label htmlFor="dismiss">{t("officer.dismissReason")}</label>
+                <input id="dismiss" className="input" value={reason} onChange={(e) => setReason(e.target.value)} />
+              </div>
+              <button className="btn danger small" disabled={busy || reason.trim().length < 3} onClick={() => status("dismissed", reason.trim())}>{t("officer.dismiss")}</button>
             </div>
-            <button className="btn ghost small" disabled={busy || mergeInto.length < 4} onClick={() => act(() => officerApi.merge(r.code, mergeInto))}>{t("officer.merge")}</button>
-          </>
-        )}
-      </div>
+          )}
+          <div className="filters">
+            {r.merged_into ? (
+              <button className="btn ghost small" disabled={busy} onClick={() => act(() => officerApi.unmerge(r.code))}>{t("officer.unmerge", { code: r.merged_into })}</button>
+            ) : (
+              <>
+                <div className="field">
+                  <label htmlFor="merge">{t("officer.mergeInto")}</label>
+                  <input id="merge" className="input" placeholder="RS-0000" value={mergeInto} onChange={(e) => setMergeInto(e.target.value.toUpperCase())} />
+                </div>
+                <button className="btn ghost small" disabled={busy || mergeInto.length < 4} onClick={() => act(() => officerApi.merge(r.code, mergeInto))}>{t("officer.merge")}</button>
+              </>
+            )}
+          </div>
+        </div>
+      </details>
 
       <details>
         <summary className="label">{t("officer.history")}</summary>

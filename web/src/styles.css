@@ -291,3 +291,10 @@ tr.clickable { cursor: pointer; }
 
 .defects { margin: 0; padding-left: 1.3rem; display: grid; gap: 0.6rem; }
 .defects .rec { margin: 0.2rem 0 0; }
+
+/* Report popup in the officer queue */
+dialog.modal { width: min(920px, calc(100vw - 24px)); max-height: calc(100vh - 24px); padding: 0; border: 0; border-radius: 14px; background: var(--surface, #fff); color: inherit; overflow: auto; }
+dialog.modal::backdrop { background: rgba(11, 37, 69, 0.6); }
+.modal-body { position: relative; padding: 14px; }
+.modal-x { position: absolute; top: 8px; right: 10px; z-index: 2; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line-strong); background: #fff; color: var(--navy); font-size: 1.6rem; line-height: 1; cursor: pointer; }
+.modal-body > section { border: 0; box-shadow: none; padding-top: 4px; }
