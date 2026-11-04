@@ -6,3 +6,6 @@ opencv-python-headless>=4.10,<5  # 4.x ships the face and plate detectors used f
 numpy>=2.0
 boto3>=1.35
 python-multipart>=0.0.9
+argon2-cffi>=23.1  # officer password hashes
+PyJWT>=2.8  # signed officer sessions
+httpx>=0.27  # Groq and Ollama providers

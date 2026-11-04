@@ -10,11 +10,14 @@
     - name: Check required settings
       ansible.builtin.assert:
         that:
-          - dashboard_pin | length >= 4
+          - (admin_email | length > 0 and admin_password | length >= 10) or dashboard_pin | length >= 4
+          - ai_mode in ['bedrock', 'groq', 'ollama']
+          - ai_mode != 'groq' or groq_api_key | length > 0
           - s3_bucket is defined and s3_bucket | length > 0
           - bedrock_model_id is defined
         fail_msg: >-
-          Set a dashboard PIN first (export RASTESCAN_DASHBOARD_PIN=...), and run terraform apply
+          Set RASTESCAN_ADMIN_EMAIL and RASTESCAN_ADMIN_PASSWORD (10+ characters) or RASTESCAN_DASHBOARD_PIN,
+          pick RASTESCAN_AI_MODE (bedrock, groq or ollama; groq also needs GROQ_API_KEY), and run terraform apply
           so inventory/hosts.ini has the bucket and model.
         quiet: true
 
@@ -79,6 +82,15 @@
         group: false
       notify: Restart app
 
+    - name: Copy ward boundaries
+      ansible.posix.synchronize:
+        src: "{{ repo_root }}/data/"
+        dest: "{{ app_dir }}/data/"
+        delete: true
+        owner: false
+        group: false
+      notify: Restart app
+
     - name: Copy built web app
       ansible.posix.synchronize:
         src: "{{ repo_root }}/web/dist/"
@@ -129,10 +141,10 @@
       delay: 2
       until: local_health.status == 200
 
-    - name: Check it is using Bedrock, not test mode
+    - name: Check it is using the chosen AI provider, not test mode
       ansible.builtin.assert:
-        that: local_health.json.ai_mode == "bedrock"
-        fail_msg: "The app is running in {{ local_health.json.ai_mode }} mode."
+        that: local_health.json.ai_mode == ai_mode
+        fail_msg: "The app is running in {{ local_health.json.ai_mode }} mode, expected {{ ai_mode }}."
         quiet: true
 
     - name: Wait for the public HTTPS address (CloudFront can take 10-15 minutes the first time)  # noqa: run-once[task]

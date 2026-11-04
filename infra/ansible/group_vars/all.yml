@@ -2,8 +2,19 @@ app_user: rastescan
 app_dir: /opt/rastescan
 data_dir: /var/lib/rastescan
 repo_root: "{{ playbook_dir }}/../.."
-ai_mode: bedrock
+# AI provider. Override per deploy: RASTESCAN_AI_MODE=groq make deploy
+ai_mode: "{{ lookup('env', 'RASTESCAN_AI_MODE') | default('bedrock', true) }}"
+groq_api_key: "{{ lookup('env', 'GROQ_API_KEY') }}"
+groq_model: "{{ lookup('env', 'GROQ_MODEL') | default('meta-llama/llama-4-scout-17b-16e-instruct', true) }}"
+site_name: "{{ lookup('env', 'RASTESCAN_SITE_NAME') | default('Municipal Road Services', true) }}"
+# First administrator, created on first start. Read from your shell, never stored in git.
+admin_email: "{{ lookup('env', 'RASTESCAN_ADMIN_EMAIL') }}"
+admin_password: "{{ lookup('env', 'RASTESCAN_ADMIN_PASSWORD') }}"
+smtp_host: "{{ lookup('env', 'RASTESCAN_SMTP_HOST') }}"
+smtp_user: "{{ lookup('env', 'RASTESCAN_SMTP_USER') }}"
+smtp_password: "{{ lookup('env', 'RASTESCAN_SMTP_PASSWORD') }}"
+smtp_from: "{{ lookup('env', 'RASTESCAN_SMTP_FROM') }}"
 max_upload_mb: 8
 reports_per_hour: 30
-# Read from your shell so it never lands in git: export RASTESCAN_DASHBOARD_PIN=...
+# Optional expo fallback PIN. Read from your shell so it never lands in git: export RASTESCAN_DASHBOARD_PIN=...
 dashboard_pin: "{{ lookup('env', 'RASTESCAN_DASHBOARD_PIN') }}"

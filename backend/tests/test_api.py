@@ -27,7 +27,7 @@ def test_nearby_same_hazard_is_merged(client):
     far = post(client, seed=3, lat=13.05, lng=77.62).json()
     assert second["merged_into"] == first["code"]
     assert far["merged_into"] is None
-    q = client.get("/api/queue").json()
+    q = client.get("/api/queue", headers=PIN).json()
     codes = [t["code"] for t in q["tickets"]]
     assert codes.count(first["code"]) == 1 and second["code"] not in codes
     assert next(t for t in q["tickets"] if t["code"] == first["code"])["merged_count"] == 2
@@ -40,7 +40,7 @@ def test_queue_orders_by_urgency_then_severity(client, inspector):
     post(client, seed=2, lat=13.1)
     inspector.result = make_result(severity=7.2, urgency="HIGH")
     post(client, seed=3, lat=13.2)
-    q = client.get("/api/queue").json()
+    q = client.get("/api/queue", headers=PIN).json()
     assert [t["urgency"] for t in q["tickets"]] == ["CRITICAL", "HIGH", "MEDIUM"]
     assert q["counts"] == {"LOW": 0, "MEDIUM": 1, "HIGH": 1, "CRITICAL": 1}
 
@@ -50,7 +50,7 @@ def test_no_damage_and_low_confidence_stay_out_of_queue(client, inspector):
     assert post(client, seed=1).json()["status"] == "no_damage"
     inspector.result = make_result(confidence=0.4)
     assert post(client, seed=2).json()["status"] == "review"
-    q = client.get("/api/queue").json()
+    q = client.get("/api/queue", headers=PIN).json()
     assert q["tickets"] == [] and len(q["review"]) == 1
 
 
