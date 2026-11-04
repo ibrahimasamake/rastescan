@@ -34,5 +34,28 @@ def find_duplicate(candidates: list[dict], lat: float | None, lng: float | None,
 
 
 def queue_key(ticket: dict):
-    """Urgency, then severity, then number of merged reports, then oldest first."""
-    return (-URGENCY_RANK[ticket["urgency"]], -ticket["severity"], -ticket["merged_count"], ticket["created_at"])
+    """Urgency, then nearest deadline, then severity, then number of reports for the spot, then oldest first."""
+    return (-URGENCY_RANK[ticket["urgency"]], ticket.get("due_at") or "9999", -ticket["severity"],
+            -ticket["merged_count"], ticket["created_at"])
+
+
+def route_order(stops: list[dict], start: tuple[float, float] | None = None) -> list[dict]:
+    """Nearest-neighbour visiting order for a crew's day. Stops need lat/lng; ones without go last.
+
+    Starts at `start` (lat, lng) if given, otherwise at the first stop (the most urgent one).
+    Each returned stop gets leg_m, the distance from the previous stop.
+    """
+    located = [dict(s) for s in stops if s.get("lat") is not None and s.get("lng") is not None]
+    rest = [dict(s, leg_m=None) for s in stops if s.get("lat") is None or s.get("lng") is None]
+    order: list[dict] = []
+    here = start
+    while located:
+        if here is None:
+            nxt = located[0]
+        else:
+            nxt = min(located, key=lambda s: distance_m(here[0], here[1], s["lat"], s["lng"]))
+        nxt["leg_m"] = round(distance_m(here[0], here[1], nxt["lat"], nxt["lng"])) if here else 0
+        order.append(nxt)
+        located.remove(nxt)
+        here = (nxt["lat"], nxt["lng"])
+    return order + rest

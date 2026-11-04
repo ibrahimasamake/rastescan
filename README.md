@@ -1,79 +1,109 @@
 # RasteScan
 
-AI road inspector for the TechKubik National Level Project Expo 2026 (HKBK College of Engineering, 5–6 November 2026).
-A citizen photographs road damage; the backend blurs faces and plates, asks Amazon Nova on Bedrock to classify the
-damage and score it, then ranks it in a repair queue for the ward engineer. Duplicate reports of the same spot merge
-into one ticket, and a crew's after-photo is inspected again before the ticket is marked verified.
+A public road-repair portal. Citizens photograph road damage, an AI inspector classifies and scores it, and the city
+works a ranked repair queue. **Everyone can see everything**: every report, its urgency, who is handling it, and the
+before/after proof when it is fixed.
 
-## Stack
-| Part | Choice |
-|---|---|
-| Web app + Android app | React + Vite (`web/`), wrapped with Capacitor for the Play internal testing track (`web/android`) |
-| Backend | Python FastAPI, SQLite, Pillow, OpenCV (privacy blur) (`backend/`) |
-| AI in production | Amazon Nova on Amazon Bedrock, called with the EC2 IAM role (no keys in code) |
-| Hosting | EC2 t4g.small behind CloudFront, photos in S3; created by Terraform, configured by Ansible (`infra/`, `docs/aws-setup.md`) |
-| Dev tooling | Claude Code helps write the code; it is not part of the running app |
+Built for the TechKubik National Level Project Expo 2026 (HKBK College of Engineering, Bengaluru).
 
-## Run it on your laptop
-Backend (Python 3.11+). `AI_MODE=fake` returns sample answers so you can work without AWS; the app shows a "Test mode" banner.
+## What is in it
+- **Public portal** (no login): home with live numbers, map of all reports, sortable list with CSV download,
+  report pages with a full public timeline and before/after slider, ward scoreboard, open data API.
+  English, Kannada and Hindi; text size control; works offline for sending reports.
+- **Citizen reporting**: photo + GPS (or a pin on the map), optional note and email, instant AI result,
+  tracking link, "I see this too" votes, "My reports" by device.
+- **Government dashboard** (officer login): queue ordered by urgency and deadline, assign crews, official public
+  updates, repair photo re-inspection by the AI, review queue for unsure results, merge duplicates, crew work orders,
+  analytics, officer accounts, audit trail of every change.
+- **AI providers**: Amazon Nova on Bedrock, Groq (free key), Ollama (local, free) or a fake test mode.
+  The model only suggests; the server applies fixed urgency rules.
+- **Android app** (Capacitor) and **AWS deploy** with Terraform + Ansible.
+
+## Architecture
+```mermaid
+flowchart LR
+  subgraph Clients
+    W[Web portal<br/>React + Vite]
+    A[Android app<br/>Capacitor]
+  end
+  CF[CloudFront<br/>HTTPS]
+  subgraph EC2 [EC2 t4g.small]
+    API[FastAPI<br/>public, citizen, officer APIs]
+    DB[(SQLite<br/>reports, history,<br/>officers, wards)]
+  end
+  S3[(S3<br/>blurred photos)]
+  AI{{AI provider<br/>Bedrock Nova / Groq / Ollama}}
+  W --> CF --> API
+  A --> CF
+  API --> DB
+  API --> S3
+  API -->|blurred photo + prompt| AI
+  AI -->|JSON, validated| API
+```
+Faces and number plates are blurred before a photo is stored or sent to any AI. Public API responses never contain
+device ids, contact emails, citizen notes or officer emails.
+
+## Run everything on a laptop (about 10 minutes)
+Needs Python 3.11+, Node 20+, make.
 ```bash
-cd backend
-python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-AI_MODE=fake .venv/bin/uvicorn app.main:create_app --factory --reload --port 8000
+git clone https://github.com/ibrahimasamake/rastescan.git && cd rastescan
+make setup          # Python venv + npm packages
+make seed-demo      # optional: 40 clearly marked demo reports in backend/data
+make api            # terminal 1: API on :8000 in test mode (AI_MODE=fake), PIN 1234
+make web            # terminal 2: portal on http://localhost:5173
 ```
-Free AI alternatives (no AWS needed): `AI_MODE=groq GROQ_API_KEY=... ` (key from console.groq.com, never commit it) or
-`AI_MODE=ollama` after `ollama pull qwen2.5vl:7b` (runs on your laptop). The full feature plan for finishing the project
-is in `docs/COMPLETE-BUILD-PROMPT.md`.
+- Public portal: http://localhost:5173/#/
+- Officer dashboard: http://localhost:5173/#/officer, choose "Use the expo PIN instead", PIN `1234`
+- Real officer accounts: start the API with `ADMIN_EMAIL=you@example.org ADMIN_PASSWORD=at-least-10-chars make api`
+- Real AI: `AI_MODE=groq GROQ_API_KEY=... make api` or `AI_MODE=ollama make api`. See [docs/ai-providers.md](docs/ai-providers.md).
+- Take demo data out again: `make unseed-demo`
 
-With real Bedrock instead: `aws configure` with your own IAM user, then `AI_MODE=bedrock AWS_REGION=ap-south-1 BEDROCK_MODEL_ID=apac.amazon.nova-pro-v1:0 ...`.
-
-Web app (Node 20+), in a second terminal:
+Checks (the same ones CI runs):
 ```bash
-cd web
-npm ci
-npm run dev        # http://localhost:5173, proxies /api to :8000
-```
-Citizen screen: `/#/`. Ward dashboard: `/#/dashboard` (PIN is `DASHBOARD_PIN`, empty locally).
-
-Tests:
-```bash
-cd backend && .venv/bin/python -m pytest -q
-cd web && npx eslint . && npx tsc -b && npx vite build
-```
-
-## Layout
-```
-backend/app/       FastAPI app: schema + rules, Bedrock inspector, imaging, triage, SQLite
-backend/tests/     API and rule tests (run with the fake inspector)
-web/src/           React app: pages/Report.tsx (citizen), pages/Dashboard.tsx (ward)
-web/android/       Capacitor Android project
-prompts/           Inspection prompt sent to Nova
-scripts/evaluate.py  Accuracy check on labelled photos in test-photos/
-infra/terraform/   AWS: EC2, Elastic IP, CloudFront, S3, IAM role, budget
-infra/ansible/     Server setup and app deploy (site.yml)
-docs/              design.html, aws-setup.md, android.md
+make test
 ```
 
 ## Deploy
 ```bash
 cd infra
-make up        # first time: create AWS resources and deploy
-make deploy    # later: send new code to the server
+make up          # Terraform creates AWS resources, Ansible deploys
+make deploy      # later: send new code
+make seed-demo   # optional demo data on the server
 ```
-Details in `docs/aws-setup.md`.
+Details in [docs/aws-setup.md](docs/aws-setup.md). Android build and Play internal testing: [docs/android.md](docs/android.md).
 
-## API
-| Method | Path | What it does |
-|---|---|---|
-| GET | `/api/health` | `{"ok": true, "ai_mode": "bedrock"}` |
-| POST | `/api/reports` | multipart `photo`, optional `lat`, `lng`, `device_id` → report |
-| GET | `/api/reports?device_id=` | a device's own reports |
-| GET | `/api/reports/{code}` | one report, e.g. `RS-0007` |
-| GET | `/api/queue` | open tickets sorted by urgency, severity, merged count; low-confidence reports for review |
-| PATCH | `/api/reports/{code}` | `{"status": "assigned" \| "fixed" \| "dismissed" \| "new"}` (needs `X-Dashboard-Pin`) |
-| POST | `/api/reports/{code}/after-photo` | crew's after photo; verified if the damage is gone (needs PIN) |
+## Guides
+- [Choose your AI provider](docs/ai-providers.md) and compare them with `make evaluate`
+- [Officer guide (1 page)](docs/officer-guide.md)
+- [Citizen FAQ](docs/citizen-faq.md)
+- [Original project design](docs/design.html)
+
+## Layout
+```
+backend/app/       FastAPI: services.py (all report logic + audit trail), routes_public.py, routes_citizen.py,
+                   routes_officer.py, inspector.py (AI providers), wards.py, auth.py, db.py (migrations)
+backend/tests/     65 tests: API, privacy rule, wards, officer flows, providers, notifications, demo seed
+web/src/           React portal: pages/ (public), officer/ (dashboard), i18n/ (en, kn, hi), outbox.ts (offline)
+web/android/       Capacitor Android project
+data/wards.geojson SAMPLE ward polygons (replace with your city's)
+prompts/           Inspection prompt sent to the AI
+scripts/           evaluate.py (compare AI providers), seed_demo.py (demo data)
+infra/             Terraform (AWS) + Ansible (server) + Makefile
+```
+
+## API summary
+| Who | Endpoints |
+|---|---|
+| Anyone | `GET /api/public/reports`, `/reports/{code}`, `/stats`, `/wards`, `/recently-resolved`, `/export.csv`, `/config`; `POST /api/public/reports/{code}/vote` |
+| Citizen app | `POST /api/reports` (photo, lat, lng, device_id, note, contact_email), `GET /api/reports?device_id=` |
+| Officers | `/api/v2/auth/login`, `/api/v2/officer/queue`, `/reports/{code}/assign`, `/status`, `/comment`, `/review`, `/repair-photo`, `/merge`, `/unmerge`, `/bulk-status`, `/work-order`, `/analytics` |
+| Admins | `/api/v2/admin/officers`, `/api/v2/admin/export.csv` |
+
+Interactive API docs at `/docs` on the running server.
 
 ## Rules for contributors
-- Never commit AWS keys, `.env` files, `.pem` files or Android keystores.
-- Work on a branch and open a pull request into `main`.
-- The server, not the model, decides urgency: it is recomputed from the severity score, and an open manhole is always critical.
+- Never commit secrets: AWS keys, `.env`, `terraform.tfvars`, `*.pem`, Android keystores, PINs or passwords.
+- Work on a branch and open a pull request into `main`; CI must be green.
+- Every change to a report goes through `backend/app/services.py` so it lands in the audit trail.
+- The server, not the model, decides urgency. Do not loosen `backend/app/schema.py`.
+- Use a generic site name and the placeholder emblem; never a real government's name, emblem or logo without permission.

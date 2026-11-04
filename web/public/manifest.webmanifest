@@ -1,0 +1,10 @@
+{
+  "name": "Municipal Road Services",
+  "short_name": "Road Services",
+  "description": "Report road damage with a photo and follow every repair in public.",
+  "start_url": "./#/",
+  "display": "standalone",
+  "background_color": "#f3f5f8",
+  "theme_color": "#0b2545",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

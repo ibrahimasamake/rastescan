@@ -1,34 +1,40 @@
-import type { Hazard, Status, Urgency } from "./api";
+import type { Hazard, PublicStatus, Urgency } from "./api";
+import type { Key } from "./i18n/en";
 
-export const URGENCY_LABEL: Record<Urgency, string> = { LOW: "Low", MEDIUM: "Medium", HIGH: "High", CRITICAL: "Critical" };
-export const FIX_WITHIN: Record<Urgency, string> = {
-  LOW: "Next quarterly ward round", MEDIUM: "Within 7 days", HIGH: "Within 48 hours", CRITICAL: "Within 24 hours",
-};
-export const STATUS_LABEL: Record<Status, string> = {
-  new: "Waiting for a crew", review: "A person will check this photo", assigned: "Crew assigned",
-  fixed: "Marked fixed, waiting for after photo", verified: "Repair verified", dismissed: "Closed without repair",
-  no_damage: "No damage found",
-};
+type T = (key: Key, vars?: Record<string, string | number | null | undefined>) => string;
 
-export function hazardName(h: Hazard): string {
-  return h === "None" ? "Road OK" : h;
+export function hazardLabel(t: T, h: Hazard | string): string {
+  return t(`hazard.${h}` as Key);
 }
 
-export function ago(iso: string): string {
-  const min = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min} min ago`;
+export function urgencyLabel(t: T, u: Urgency): string {
+  return t(`urgency.${u}` as Key);
+}
+
+export function statusLabel(t: T, s: PublicStatus | string): string {
+  return t(`status.${s}` as Key);
+}
+
+/** "3 h", "2 days": the larger unit that fits. */
+export function duration(t: T, ms: number): string {
+  const min = Math.max(1, Math.round(Math.abs(ms) / 60000));
+  if (min < 60) return t("time.minutes", { n: min });
   const h = Math.round(min / 60);
-  if (h < 24) return `${h} h ago`;
-  return `${Math.round(h / 24)} days ago`;
+  if (h < 48) return t("time.hours", { n: h });
+  const d = Math.round(h / 24);
+  return d === 1 ? t("time.day") : t("time.days", { n: d });
 }
 
-export function dueText(iso: string | null): string {
-  if (!iso) return "";
-  const h = Math.round((new Date(iso).getTime() - Date.now()) / 3600000);
-  if (h < 0) return `Overdue by ${-h} h`;
-  if (h < 48) return `Due in ${h} h`;
-  return `Due in ${Math.round(h / 24)} days`;
+export function ago(t: T, iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  return ms < 60000 ? t("time.justNow") : t("time.ago", { time: duration(t, ms) });
+}
+
+export function sla(t: T, dueIso: string | null, closed: boolean): { text: string; overdue: boolean } | null {
+  if (!dueIso) return null;
+  if (closed) return { text: t("sla.done"), overdue: false };
+  const ms = new Date(dueIso).getTime() - Date.now();
+  return ms < 0 ? { text: t("sla.overdue", { time: duration(t, ms) }), overdue: true } : { text: t("sla.dueIn", { time: duration(t, ms) }), overdue: false };
 }
 
 export function deviceId(): string {
@@ -43,3 +49,5 @@ export function deviceId(): string {
     return "no-storage";
   }
 }
+
+export const CLOSED = new Set(["verified", "dismissed", "no_damage"]);
