@@ -32,6 +32,11 @@ function Loading() {
   return <div className="wrap page"><Skeleton h={36} w="40%" /><Skeleton h={240} /></div>;
 }
 
+// Offline support: cache the app shell, the last public data and photos. Production builds only.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+}
+
 // Hash routing works the same on the web, inside the Android app, and behind CloudFront.
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -9,6 +9,7 @@ import { Skeleton } from "../components/States";
 import { deviceId, hazardLabel } from "../format";
 import { useI18n } from "../i18n";
 import type { Key } from "../i18n/en";
+import { queue } from "../outbox";
 import { shrinkPhoto } from "../photo";
 import { usePortal } from "../portal";
 
@@ -86,6 +87,7 @@ export default function NewReport() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Report | null>(null);
+  const [queued, setQueued] = useState(false);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
@@ -101,22 +103,44 @@ export default function NewReport() {
 
   const position = (): Pos | null => (loc.state === "found" ? loc.pos : pin ? { lat: pin[0], lng: pin[1] } : null);
 
+  const reset = () => {
+    setFile(null);
+    setPreview(null);
+    setNote("");
+  };
+
   const send = async () => {
     if (!file) return;
     setSending(true);
     setError(null);
+    setQueued(false);
+    const pos = position();
+    // Without any position, send the original so the server can read the photo's own GPS.
+    const blob = pos || file.size > 8 * 1024 * 1024 ? await shrinkPhoto(file) : file;
+    const keep = async () => {
+      await queue({ photo: blob, deviceId: deviceId(), lat: pos?.lat ?? null, lng: pos?.lng ?? null, note: note.trim(), email: email.trim() });
+      reset();
+      setQueued(true);
+    };
     try {
-      const pos = position();
-      // Without any position, send the original so the server can read the photo's own GPS.
-      const blob = pos || file.size > 8 * 1024 * 1024 ? await shrinkPhoto(file) : file;
+      if (!navigator.onLine) {
+        await keep();
+        return;
+      }
       const r = await api.submit(blob, deviceId(), pos ? { lat: pos.lat, lng: pos.lng } : null, note.trim(), email.trim());
       setResult(r);
-      setFile(null);
-      setPreview(null);
-      setNote("");
+      reset();
       refreshStats();
     } catch (e) {
-      setError(e instanceof ApiError && e.status >= 400 ? e.message : e instanceof ApiError && e.status === 0 ? t("common.offline") : t("common.error"));
+      if (e instanceof ApiError && e.status === 0) {
+        try {
+          await keep();
+        } catch {
+          setError(t("common.offline"));
+        }
+      } else {
+        setError(e instanceof ApiError && e.status >= 400 ? e.message : t("common.error"));
+      }
     } finally {
       setSending(false);
     }
@@ -179,6 +203,7 @@ export default function NewReport() {
         </div>
 
         {error && <p className="error-text" role="alert">{error}</p>}
+        {queued && <p className="loc none" role="status">{t("new.queued")}</p>}
         <button className="btn accent big" onClick={send} disabled={!file || sending}>{sending ? t("new.sending") : t("new.send")}</button>
         <p className="small muted">{t("new.privacy")}</p>
       </div>

@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { Icon } from "../components/Icons";
@@ -16,6 +16,22 @@ function Stat({ value, label, warn = false }: { value: string | null; label: str
       <span>{label}</span>
     </div>
   );
+}
+
+/** Renders children only once the box scrolls near the screen, so the map code is not loaded up front. */
+function WhenVisible({ children, fallback }: { children: React.ReactNode; fallback: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    if (!ref.current || !("IntersectionObserver" in window)) {
+      setSeen(true);
+      return;
+    }
+    const io = new IntersectionObserver((e) => e.some((x) => x.isIntersecting) && setSeen(true), { rootMargin: "200px" });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, []);
+  return <div ref={ref}>{seen ? children : fallback}</div>;
 }
 
 export default function Home() {
@@ -57,9 +73,11 @@ export default function Home() {
             <h2 id="map-h">{t("home.mapTitle")}</h2>
             <Link to="/map">{t("home.mapLink")}</Link>
           </div>
-          <Suspense fallback={<div className="map-box short"><Skeleton h="100%" /></div>}>
-            <MapView reports={open.data?.items ?? []} short />
-          </Suspense>
+          <WhenVisible fallback={<div className="map-box short" />}>
+            <Suspense fallback={<div className="map-box short"><Skeleton h="100%" /></div>}>
+              <MapView reports={open.data?.items ?? []} short />
+            </Suspense>
+          </WhenVisible>
         </section>
 
         <section className="section" aria-labelledby="resolved-h">

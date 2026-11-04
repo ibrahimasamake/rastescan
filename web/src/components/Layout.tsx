@@ -1,8 +1,10 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { LANGS, useI18n, type TextSize } from "../i18n";
 import { usePortal } from "../portal";
+import { onChange, pending, startOutbox } from "../outbox";
 import { Emblem } from "./Emblem";
+import { Toast, useToast } from "./States";
 
 const SIZES: { s: TextSize; label: string; key: "strip.smaller" | "strip.normal" | "strip.larger" }[] = [
   { s: "sm", label: "A-", key: "strip.smaller" },
@@ -24,13 +26,37 @@ function TopStrip() {
           </div>
           <div className="group" role="group" aria-label={t("strip.textSize")}>
             {SIZES.map((x) => (
-              <button key={x.s} aria-pressed={size === x.s || (x.s === "lg" && size === "xl")} aria-label={t(x.key)}
-                onClick={() => setSize(x.s === "lg" && size === "lg" ? "xl" : x.s)}>{x.label}</button>
+              <button key={x.s} aria-pressed={size === x.s || (x.s === "lg" && size === "xl")} title={t(x.key)}
+                onClick={() => setSize(x.s === "lg" && size === "lg" ? "xl" : x.s)}>{x.label}<span className="sr-only"> {t(x.key)}</span></button>
             ))}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/** Shows how many offline reports wait on this phone, and says so when they have been sent. */
+function OutboxStatus() {
+  const { t } = useI18n();
+  const { refreshStats } = usePortal();
+  const [count, setCount] = useState(0);
+  const [toast, show] = useToast();
+  useEffect(() => {
+    const update = () => pending().then((p) => setCount(p.length));
+    update();
+    const off = onChange(update);
+    startOutbox(() => {
+      show(t("new.sentQueued"));
+      refreshStats();
+    });
+    return () => { off(); };
+  }, [t, show, refreshStats]);
+  return (
+    <>
+      {count > 0 && <div className="notice" role="status"><div className="wrap">{t("new.queuedCount", { n: count })}</div></div>}
+      <Toast msg={toast} />
+    </>
   );
 }
 
@@ -68,6 +94,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </nav>
       {config?.ai_mode === "fake" && <div className="notice test"><div className="wrap">{t("banner.test")}</div></div>}
       {!!stats?.demo_count && <div className="notice"><div className="wrap">{t("banner.demo", { count: stats.demo_count })}</div></div>}
+      <OutboxStatus />
       <main id="main" tabIndex={-1}>{children}</main>
       <footer className="footer">
         <div className="wrap">

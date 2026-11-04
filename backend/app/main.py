@@ -3,6 +3,7 @@ import logging
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -60,6 +61,14 @@ def create_app(settings: Settings | None = None, inspector: Inspector | None = N
     app = FastAPI(title="RasteScan API", description="Public road damage reports and the city's repair queue.")
     app.state.ctx = ctx
     app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=["*"], allow_headers=["*"])
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+    @app.middleware("http")
+    async def long_cache_for_built_assets(request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/assets/") and response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"  # file names carry a content hash
+        return response
     app.include_router(routes_citizen.router)
     app.include_router(routes_public.router)
     app.include_router(routes_officer.router)
