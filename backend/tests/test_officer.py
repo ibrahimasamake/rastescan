@@ -183,3 +183,25 @@ def test_officer_can_resolve_after_ai_still_sees_damage_and_it_shows_as_recently
     other = submit(c, seed=7, lat=13.2)["code"]
     c.post(f"/api/v2/officer/reports/{other}/status", json={"status": "verified"}, headers=h)
     assert other in [r["code"] for r in c.get("/api/public/recently-resolved").json()]
+
+
+def test_rescan_fills_in_a_report_saved_while_the_ai_was_busy(officer_client, inspector):
+    from app.inspector import InspectorBusy
+
+    c = officer_client
+    h = login(c)
+    real = inspector.inspect
+
+    def busy(jpeg):
+        raise InspectorBusy("rate limited")
+
+    inspector.inspect = busy
+    r = submit(c)
+    assert r["status"] == "review" and r["ai_pending"]
+    code = r["code"]
+    still = c.post(f"/api/v2/officer/reports/{code}/rescan", headers=h)
+    assert still.status_code == 503
+    inspector.inspect = real
+    done = c.post(f"/api/v2/officer/reports/{code}/rescan", headers=h).json()
+    assert done["status"] == "new" and not done["ai_pending"] and done["hazard_type"] == "Pothole"
+    assert c.post(f"/api/v2/officer/reports/{code}/rescan", headers=h).status_code == 409

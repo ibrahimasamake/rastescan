@@ -81,6 +81,7 @@ export function ReportPanel({ code, assignees, onChange }: { code: string; assig
           <p className="label">{t("officer.confirmLead")}</p>
           <p className="small muted">{r.ai_pending ? t("officer.aiBusy") : t("officer.aiSaid", { hazard: hazardLabel(t, res.hazard_type), severity: res.severity_score.toFixed(1), confidence: Math.round(r.confidence * 100) })}</p>
           <div className="btn-row">
+            {r.ai_pending && <button className="btn accent" disabled={busy} onClick={() => act(() => officerApi.rescan(r.code))}>{t("officer.rescan")}</button>}
             <button className="btn" disabled={busy || r.ai_pending || r.hazard_type === "None"} onClick={() => act(() => officerApi.review(r.code, r.hazard_type, r.severity))}>{t("officer.looksRight")}</button>
             <button className="btn outline" disabled={busy} onClick={() => status("dismissed", "Not a road problem")}>{t("officer.notRoad")}</button>
           </div>

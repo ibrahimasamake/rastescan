@@ -16,6 +16,9 @@ class LocalStorage:
     def path(self, key: str) -> Path:
         return self.folder / key
 
+    def load(self, key: str) -> bytes:
+        return (self.folder / key).read_bytes()
+
 
 class S3Storage:
     def __init__(self, bucket: str, region: str):
@@ -26,6 +29,9 @@ class S3Storage:
 
     def save(self, key: str, data: bytes) -> None:
         self.s3.put_object(Bucket=self.bucket, Key=f"photos/{key}", Body=data, ContentType="image/jpeg")
+
+    def load(self, key: str) -> bytes:
+        return self.s3.get_object(Bucket=self.bucket, Key=f"photos/{key}")["Body"].read()
 
     def url(self, key: str) -> str:
         return self.s3.generate_presigned_url(

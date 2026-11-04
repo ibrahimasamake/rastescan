@@ -50,20 +50,38 @@ def parse_inspection(text: str) -> Inspection:
         raise InspectionError(str(exc)) from exc
 
 
-def with_backoff(call: Callable[[], str], is_rate_limit: Callable[[Exception], bool], wait_s: float) -> str:
-    """Retry once after a rate-limit refusal; a second refusal becomes InspectorBusy."""
+def _why(exc: Exception) -> str:
+    resp = getattr(exc, "response", None)
+    if resp is None:
+        return str(exc)[:200]
     try:
-        return call()
-    except Exception as exc:
-        if not is_rate_limit(exc):
-            raise
-    time.sleep(wait_s)
+        body = resp.text[:300]
+    except Exception:  # noqa: BLE001 - a streamed or closed response has no text
+        body = ""
+    return f"HTTP {getattr(resp, 'status_code', '?')} {body}".strip()
+
+
+def _pause(exc: Exception, default_s: float) -> float:
+    """Seconds to wait before retrying: the provider's Retry-After when it sends one (at most 15), else the default."""
+    resp = getattr(exc, "response", None)
     try:
-        return call()
-    except Exception as exc:
-        if is_rate_limit(exc):
-            raise InspectorBusy("the AI provider is rate limiting requests") from exc
-        raise
+        return min(15.0, max(0.0, float(resp.headers["retry-after"])))
+    except (AttributeError, KeyError, TypeError, ValueError):
+        return default_s
+
+
+def with_backoff(call: Callable[[], str], is_rate_limit: Callable[[Exception], bool], wait_s: float, retries: int = 2) -> str:
+    """Retry rate-limit refusals up to `retries` times; still refused → InspectorBusy that says why."""
+    for attempt in range(retries + 1):
+        try:
+            return call()
+        except Exception as exc:
+            if not is_rate_limit(exc):
+                raise
+            if attempt == retries:
+                raise InspectorBusy(f"the AI provider is rate limiting requests ({_why(exc)})") from exc
+            time.sleep(_pause(exc, wait_s * (attempt + 1)))
+    raise AssertionError("unreachable")
 
 
 class Inspector(Protocol):
@@ -84,7 +102,7 @@ class BedrockInspector:
         self.client = boto3.client("bedrock-runtime", region_name=region)
         self.model_id = self.model = model_id
         self.prompt = prompt
-        self.backoff_s = 2.0
+        self.backoff_s = 4.0
 
     @staticmethod
     def _throttled(exc: Exception) -> bool:
@@ -134,7 +152,7 @@ class _HttpInspector:
 
         self.http = httpx.Client(timeout=timeout_s)
         self.prompt = prompt
-        self.backoff_s = 2.0
+        self.backoff_s = 4.0
 
     @staticmethod
     def _rate_limited(exc: Exception) -> bool:
@@ -181,7 +199,7 @@ class GroqInspector(_HttpInspector):
             "model": self.model,
             "messages": messages,
             "temperature": 0,
-            "max_completion_tokens": 2000,
+            "max_completion_tokens": 1200,
             "response_format": {"type": "json_object"},
         })
         resp.raise_for_status()

@@ -263,6 +263,21 @@ def review(code: str, body: Review, officer: auth.Officer = Depends(require_offi
     return svc.full_item(ctx, svc.row_by_code(ctx, code))
 
 
+@router.post("/api/v2/officer/reports/{code}/rescan")
+def rescan(code: str, officer: auth.Officer = Depends(require_officer), ctx: Ctx = Depends(get_ctx)):
+    """Run the AI again on a report that was saved while the AI was busy (or unsure)."""
+    row = svc.row_by_code(ctx, code)
+    if row["status"] != "review":
+        raise HTTPException(409, "Only reports waiting for review can be scanned again.")
+    try:
+        svc.rescan(ctx, row)
+    except InspectorBusy as exc:
+        raise HTTPException(503, "The AI is still busy. Wait a minute and try again.") from exc
+    except InspectionError as exc:
+        raise HTTPException(502, "The AI gave an answer we could not use. Try again.") from exc
+    return svc.full_item(ctx, svc.row_by_code(ctx, code))
+
+
 class Merge(BaseModel):
     into: str
 

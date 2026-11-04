@@ -246,7 +246,8 @@ def create_report(ctx: Ctx, jpeg: bytes, lat: float | None, lng: float | None, d
     if result is None:
         try:
             result = inspect(ctx, jpeg)
-        except InspectorBusy:
+        except InspectorBusy as exc:
+            log.warning("AI busy, report saved for review: %s", exc)
             pending = True
             result = Inspection.model_validate(PENDING_RESULT)
         except InspectionError as exc:
@@ -307,6 +308,25 @@ def create_report(ctx: Ctx, jpeg: bytes, lat: float | None, lng: float | None, d
         _raise_parent_priority(ctx, parent_id, urgency, result.severity_score, created)
         record(ctx, parent_id, "duplicate_added", CITIZEN, detail={"code": f"RS-{rid:04d}"}, at=created)
     return row_by_id(ctx, rid)
+
+
+def rescan(ctx: Ctx, row: dict) -> dict:
+    """Ask the AI again about a stored photo whose first scan was refused or unclear. Raises like inspect() does."""
+    result = inspect(ctx, ctx.storage.load(row["photo_key"]))
+    urgency = urgency_for(result)
+    review = needs_human_review(result)
+    status = "review" if review else "no_damage" if result.hazard_type == "None" else "new"
+    ts = iso(now())
+    due = iso(triage.due_at(parse_iso(row["created_at"]), urgency)) if status != "no_damage" else None
+    ctx.db.execute(
+        "UPDATE reports SET ai_json = ?, hazard_type = ?, severity = ?, urgency = ?, model_urgency = ?, confidence = ?, "
+        "needs_review = ?, ai_pending = 0, status = ?, due_at = ?, updated_at = ? WHERE id = ?",
+        (result.model_dump_json(), result.hazard_type, result.severity_score, urgency, result.urgency_level,
+         result.confidence, int(review), status, due, ts, row["id"]))
+    record(ctx, row["id"], "ai_assessed", AI, new=urgency, detail={
+        "hazard_type": result.hazard_type, "severity": result.severity_score, "urgency": urgency,
+        "model_urgency": result.urgency_level, "confidence": result.confidence}, public=status != "no_damage")
+    return row_by_id(ctx, row["id"])
 
 
 def _raise_parent_priority(ctx: Ctx, parent_id: int, urgency: str, severity: float, at: datetime) -> None:

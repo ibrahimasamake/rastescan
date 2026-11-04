@@ -332,6 +332,7 @@ export const kn: Dict = {
   "officer.why.duplicate": "ನಕಲು ವರದಿ",
   "officer.why.private": "ಖಾಸಗಿ ರಸ್ತೆ",
   "officer.why.cantFind": "ಸ್ಥಳ ಸಿಗಲಿಲ್ಲ",
+  "officer.rescan": "AI ಯಿಂದ ಮತ್ತೆ ಪರಿಶೀಲಿಸಿ",
   "officer.assign": "ನಿಯೋಜಿಸಿ",
   "officer.assignTo": "ತಂಡ ಅಥವಾ ವ್ಯಕ್ತಿಗೆ ನಿಯೋಜಿಸಿ",
   "officer.markFixed": "ದುರಸ್ತಿ ಮುಗಿದಿದೆ ಎಂದು ಗುರುತಿಸಿ",

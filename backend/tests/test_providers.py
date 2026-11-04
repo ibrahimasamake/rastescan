@@ -79,3 +79,22 @@ def test_make_inspector_modes(tmp_path):
         make_inspector(Settings(ai_mode="groq", groq_api_key=""))
     with pytest.raises(ValueError):
         make_inspector(Settings(ai_mode="magic"))
+
+
+def test_busy_error_says_why_and_retry_after_is_used(monkeypatch):
+    import httpx
+
+    from app import inspector as mod
+
+    slept = []
+    monkeypatch.setattr(mod.time, "sleep", slept.append)
+    calls = []
+
+    def answer(req):
+        calls.append(1)
+        return httpx.Response(429, headers={"retry-after": "7"}, text='{"error":{"message":"Rate limit reached for tokens per minute"}}')
+
+    with pytest.raises(InspectorBusy) as e:
+        mock(GroqInspector("k", "m", "P"), answer).inspect(b"x")
+    assert len(calls) == 3 and slept == [7.0, 7.0]
+    assert "429" in str(e.value) and "tokens per minute" in str(e.value)

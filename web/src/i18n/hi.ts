@@ -332,6 +332,7 @@ export const hi: Dict = {
   "officer.why.duplicate": "दोहरी रिपोर्ट",
   "officer.why.private": "निजी सड़क",
   "officer.why.cantFind": "जगह नहीं मिली",
+  "officer.rescan": "AI से दोबारा जाँच कराएँ",
   "officer.assign": "सौंपें",
   "officer.assignTo": "टीम या व्यक्ति को सौंपें",
   "officer.markFixed": "मरम्मत पूरी चिह्नित करें",

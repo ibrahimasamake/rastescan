@@ -323,6 +323,7 @@ export const officerApi = {
   comment: (code: string, body: string) => call<Report>(`/api/v2/officer/reports/${enc(code)}/comment`, json("POST", { body })),
   review: (code: string, hazard_type: string, severity_score: number) =>
     call<Report>(`/api/v2/officer/reports/${enc(code)}/review`, json("POST", { hazard_type, severity_score })),
+  rescan: (code: string) => call<Report>(`/api/v2/officer/reports/${enc(code)}/rescan`, json("POST", {})),
   merge: (code: string, into: string) => call<Report>(`/api/v2/officer/reports/${enc(code)}/merge`, json("POST", { into })),
   unmerge: (code: string) => call<Report>(`/api/v2/officer/reports/${enc(code)}/unmerge`, json("POST", {})),
   repairPhoto: (code: string, photo: Blob) => {
