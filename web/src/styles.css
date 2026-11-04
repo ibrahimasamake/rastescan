@@ -243,7 +243,7 @@ details.filter-box > summary { cursor: pointer; font-weight: 700; color: var(--n
 
 /* ---------- map ---------- */
 .map-box { height: 60vh; min-height: 360px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); background: var(--tint); position: relative; z-index: 0; }
-.map-box.short { height: 320px; min-height: 0; }
+.map-box.short { height: clamp(400px, 60vh, 620px); min-height: 0; }
 .map-pop { display: flex; flex-direction: column; gap: 6px; min-width: 200px; line-height: 1.4; font-family: var(--body); }
 .map-pop img { width: 100%; height: 110px; object-fit: cover; border-radius: 6px; }
 .cluster-icon { background: var(--navy); color: #fff; border: 3px solid #fff; border-radius: 50%; display: grid !important; place-items: center; font: 700 0.85rem/1 var(--body); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35); }
@@ -298,3 +298,8 @@ dialog.modal::backdrop { background: rgba(11, 37, 69, 0.6); }
 .modal-body { position: relative; padding: 14px; }
 .modal-x { position: absolute; top: 8px; right: 10px; z-index: 2; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line-strong); background: #fff; color: var(--navy); font-size: 1.6rem; line-height: 1; cursor: pointer; }
 .modal-body > section { border: 0; box-shadow: none; padding-top: 4px; }
+
+/* Map pins */
+.balise { background: none; border: 0; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45)); }
+.balise svg { display: block; }
+.balise-n { position: absolute; top: -4px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--navy); color: #fff; font: 700 0.7rem/18px var(--body); text-align: center; border: 1.5px solid #fff; font-style: normal; }

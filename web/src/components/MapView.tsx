@@ -17,7 +17,7 @@ export function pinColour(r: PublicReport): string {
 }
 
 const HOME: [number, number] = [13.0446, 77.62];
-const CELL_PX = 56;
+const CELL_PX = 40;
 
 type Located = PublicReport & { lat: number; lng: number };
 type Cluster = { key: string; lat: number; lng: number; items: Located[] };
@@ -30,7 +30,7 @@ function useClusters(points: Located[]): Cluster[] {
   return useMemo(() => {
     void view;
     const zoom = map.getZoom();
-    if (zoom >= 16) return points.map((p) => ({ key: p.code, lat: p.lat, lng: p.lng, items: [p] }));
+    if (zoom >= 15) return points.map((p) => ({ key: p.code, lat: p.lat, lng: p.lng, items: [p] }));
     const cells = new Map<string, Located[]>();
     for (const p of points) {
       const pt = map.project([p.lat, p.lng], zoom);
@@ -62,6 +62,21 @@ function Picker({ onPick }: { onPick: (lat: number, lng: number) => void }) {
   return null;
 }
 
+/** A map pin (balise): a teardrop in the urgency colour, a tick when resolved, and a count when several people reported it. */
+function balise(r: Located): L.DivIcon {
+  const colour = pinColour(r);
+  const resolved = r.public_status === "resolved";
+  const mark = resolved
+    ? '<path d="M10.5 16.5l4.5 4.5 8-9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'
+    : '<circle cx="17" cy="16" r="5.5" fill="#fff"/>';
+  const count = r.reported_count > 1 ? `<i class="balise-n">${r.reported_count > 99 ? "99+" : r.reported_count}</i>` : "";
+  return L.divIcon({
+    className: "balise",
+    html: `<svg viewBox="0 0 34 44" width="34" height="44" aria-hidden="true"><path d="M17 42C17 42 3 27 3 16a14 14 0 1 1 28 0c0 11-14 26-14 26z" fill="${colour}" stroke="#fff" stroke-width="2.5"/>${mark}</svg>${count}`,
+    iconSize: [34, 44], iconAnchor: [17, 43], popupAnchor: [0, -40],
+  });
+}
+
 function Pins({ points }: { points: Located[] }) {
   const { t } = useI18n();
   const map = useMap();
@@ -74,12 +89,13 @@ function Pins({ points }: { points: Located[] }) {
           title={t("map.cluster", { n: c.items.length })}
           eventHandlers={{ click: () => map.setView([c.lat, c.lng], Math.min(map.getZoom() + 2, 18)) }} />
       ) : (
-        <CircleMarker key={c.key} center={[c.lat, c.lng]} radius={8 + Math.min(c.items[0].reported_count, 5)}
-          pathOptions={{ color: "#fff", weight: 2, fillColor: pinColour(c.items[0]), fillOpacity: 0.95 }}>
+        <Marker key={c.key} position={[c.lat, c.lng]} icon={balise(c.items[0])}
+          title={`${hazardLabel(t, c.items[0].hazard_type)} · ${c.items[0].code}`}
+          zIndexOffset={c.items[0].public_status === "resolved" ? 0 : 500}>
           <Popup>
             <PopupBody r={c.items[0]} />
           </Popup>
-        </CircleMarker>
+        </Marker>
       ))}
     </>
   );
