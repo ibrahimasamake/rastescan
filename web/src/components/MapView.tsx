@@ -2,7 +2,7 @@
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { CircleMarker, LayersControl, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { Link } from "react-router-dom";
 import { absUrl, type PublicReport } from "../api";
 import { duration, hazardLabel, statusLabel, urgencyLabel } from "../format";
@@ -98,6 +98,31 @@ function PopupBody({ r }: { r: Located }) {
   );
 }
 
+const LAYER_KEY = "rastescan.mapLayer";
+
+function savedLayer(): string {
+  try {
+    return localStorage.getItem(LAYER_KEY) === "satellite" ? "satellite" : "street";
+  } catch {
+    return "street";
+  }
+}
+
+/** Remembers whether the visitor last chose street or satellite. */
+function RememberLayer() {
+  const { t } = useI18n();
+  useMapEvents({
+    baselayerchange: (e) => {
+      try {
+        localStorage.setItem(LAYER_KEY, e.name === t("map.satellite") ? "satellite" : "street");
+      } catch {
+        /* private mode: the choice just is not remembered */
+      }
+    },
+  });
+  return null;
+}
+
 export default function MapView({ reports, short = false, fit = true, pick, picked, center }: {
   reports: PublicReport[];
   short?: boolean;
@@ -106,12 +131,23 @@ export default function MapView({ reports, short = false, fit = true, pick, pick
   picked?: [number, number] | null;
   center?: [number, number];
 }) {
+  const { t } = useI18n();
   const points = reports.filter((r): r is Located => r.lat !== null && r.lng !== null);
+  const satellite = savedLayer() === "satellite";
   return (
     <div className={`map-box ${short ? "short" : ""}`}>
       <MapContainer center={center ?? HOME} zoom={13} scrollWheelZoom={!short} style={{ height: "100%", width: "100%" }}>
-        <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <LayersControl position="topright" collapsed={false}>
+          <LayersControl.BaseLayer checked={!satellite} name={t("map.street")}>
+            <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          </LayersControl.BaseLayer>
+          <LayersControl.BaseLayer checked={satellite} name={t("map.satellite")}>
+            <TileLayer maxZoom={19} attribution="Tiles &copy; Esri, Maxar, Earthstar Geographics and the GIS User Community"
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
+          </LayersControl.BaseLayer>
+        </LayersControl>
+        <RememberLayer />
         <FitTo points={points} fit={fit && !pick} />
         <Pins points={points} />
         {pick && <Picker onPick={pick} />}

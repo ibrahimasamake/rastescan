@@ -229,6 +229,8 @@ export const en = {
   "mine.changed": "Updated since your last visit",
 
   // map and list
+  "map.street": "Street",
+  "map.satellite": "Satellite",
   "map.title": "Map of all reports",
   "map.lead": "Every report sent to the ward offices, coloured by urgency. Resolved reports are green.",
   "map.loading": "Loading the map…",
