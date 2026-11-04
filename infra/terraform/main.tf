@@ -244,6 +244,7 @@ resource "local_file" "ansible_inventory" {
 
     [app:vars]
     aws_region=${var.region}
+    bedrock_region=${var.bedrock_region == "" ? var.region : var.bedrock_region}
     s3_bucket=${aws_s3_bucket.photos.bucket}
     bedrock_model_id=${var.bedrock_model_id}
     public_url=https://${aws_cloudfront_distribution.app.domain_name}

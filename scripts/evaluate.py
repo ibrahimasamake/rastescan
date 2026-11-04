@@ -23,7 +23,7 @@ def main() -> None:
     s = Settings()
     photos = ROOT / "test-photos"
     labels = list(csv.DictReader((photos / "labels.csv").open()))
-    inspector = BedrockInspector(s.bedrock_model_id, s.aws_region, load_prompt(s.prompt_file))
+    inspector = BedrockInspector(s.bedrock_model_id, s.bedrock_region, load_prompt(s.prompt_file))
     rows, type_ok, urg_ok, invalid, clean, false_alarm, times = [], 0, 0, 0, 0, 0, []
     for lab in labels:
         jpeg, _ = imaging.prepare((photos / lab["file"]).read_bytes())

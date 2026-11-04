@@ -15,6 +15,8 @@ class Settings:
     # "bedrock" in production. "fake" returns canned results for local UI work and tests only.
     ai_mode: str = field(default_factory=lambda: os.getenv("AI_MODE", "bedrock"))
     aws_region: str = field(default_factory=lambda: os.getenv("AWS_REGION", "ap-south-1"))
+    # Region for Bedrock calls only. Defaults to aws_region; set it when Bedrock is enabled in a different region.
+    bedrock_region: str = field(default_factory=lambda: os.getenv("BEDROCK_REGION") or os.getenv("AWS_REGION", "ap-south-1"))
     # Nova model or inference profile id, e.g. "apac.amazon.nova-pro-v1:0" or "amazon.nova-lite-v1:0".
     bedrock_model_id: str = field(default_factory=lambda: os.getenv("BEDROCK_MODEL_ID", "apac.amazon.nova-pro-v1:0"))
     s3_bucket: str = field(default_factory=lambda: os.getenv("S3_BUCKET", ""))

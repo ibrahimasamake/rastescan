@@ -82,6 +82,13 @@ aws bedrock-runtime converse --region eu-north-1 --model-id eu.amazon.nova-pro-v
 If only the Budgets call is denied, set `create_budget = false`.
 
 ## Bedrock access
+New accounts often get `ValidationException: Operation not allowed` or "account is being verified" in some regions,
+while another region already works. Test a real call per region and use the one that answers. The server can run in
+one region and call Bedrock in another (`bedrock_region`):
+```hcl
+bedrock_region   = "us-west-2"
+bedrock_model_id = "us.amazon.nova-lite-v1:0"   # Nova Pro may still be locked; test it before choosing it
+```
 The server role is allowed to call Amazon Nova. If the first report fails with an access error, open the Bedrock
 console in ap-south-1, enable Nova Pro and Nova Lite, and try again.
 To switch to Nova Lite, set `bedrock_model_id = "apac.amazon.nova-lite-v1:0"` in `terraform.tfvars`, then:

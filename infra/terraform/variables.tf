@@ -4,6 +4,12 @@ variable "region" {
   default     = "ap-south-1"
 }
 
+variable "bedrock_region" {
+  description = "Region where Bedrock is called. Empty means the same as region. Set it if Bedrock only works in another region."
+  type        = string
+  default     = ""
+}
+
 variable "bedrock_model_id" {
   description = "Nova model or inference profile id the app calls."
   type        = string

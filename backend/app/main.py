@@ -33,7 +33,7 @@ def create_app(settings: Settings | None = None, inspector: Inspector | None = N
         if settings.ai_mode == "fake":
             inspector = FakeInspector()
         else:
-            inspector = BedrockInspector(settings.bedrock_model_id, settings.aws_region, load_prompt(settings.prompt_file))
+            inspector = BedrockInspector(settings.bedrock_model_id, settings.bedrock_region, load_prompt(settings.prompt_file))
     model_tag = settings.bedrock_model_id if inspector.mode == "bedrock" else "fake"
     db = Database(settings.data_dir / "rastescan.db")
     storage = S3Storage(settings.s3_bucket, settings.aws_region) if settings.s3_bucket else LocalStorage(settings.data_dir / "photos")

@@ -7,4 +7,8 @@ budget_email     = "team@example.com"
 # If your AWS Organization blocks ap-south-1 (error mentions a "service control policy"), use Stockholm:
 # region           = "eu-north-1"
 # bedrock_model_id = "eu.amazon.nova-pro-v1:0"
+# If Bedrock is only unlocked in another region (new accounts: "Operation not allowed" elsewhere), keep the server
+# where it is and call Bedrock there. Test first with: aws bedrock-runtime converse --region us-west-2 ...
+# bedrock_region   = "us-west-2"
+# bedrock_model_id = "us.amazon.nova-lite-v1:0"
 # create_budget    = false   # only if the Budgets API is also blocked
