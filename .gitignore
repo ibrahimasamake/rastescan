@@ -19,3 +19,7 @@ test-photos/*.jpeg
 test-photos/*.png
 uploads/
 .DS_Store
+
+backend/data/
+!.env.example
+!web/.env.android
