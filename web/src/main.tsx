@@ -15,7 +15,9 @@ const MyReports = lazy(() => import("./pages/MyReports"));
 const MapPage = lazy(() => import("./pages/MapPage"));
 const ListPage = lazy(() => import("./pages/ListPage"));
 const Wards = lazy(() => import("./pages/Wards"));
-const LegacyDashboard = lazy(() => import("./legacy/Dashboard"));
+const Queue = lazy(() => import("./officer/Queue"));
+const Review = lazy(() => import("./officer/Review"));
+const Team = lazy(() => import("./officer/Team"));
 const Static = {
   About: lazy(() => import("./pages/Static").then((m) => ({ default: m.About }))),
   Privacy: lazy(() => import("./pages/Static").then((m) => ({ default: m.Privacy }))),
@@ -48,8 +50,10 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/privacy" element={<Static.Privacy />} />
                 <Route path="/accessibility" element={<Static.Accessibility />} />
                 <Route path="/open-data" element={<Static.OpenData />} />
-                <Route path="/dashboard" element={<LegacyDashboard />} />
-                <Route path="/officer" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/officer" element={<Queue />} />
+                <Route path="/officer/review" element={<Review />} />
+                <Route path="/officer/team" element={<Team />} />
+                <Route path="/dashboard" element={<Navigate to="/officer" replace />} />
                 <Route path="*" element={<Static.NotFound />} />
               </Routes>
             </Suspense>

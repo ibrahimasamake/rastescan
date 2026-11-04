@@ -149,9 +149,28 @@ export function setBearer(token: string | null) {
   }
 }
 
+// Expo fallback: the shared PIN, kept only for this browser tab.
+let pin: string | null = null;
+try {
+  pin = sessionStorage.getItem("rs-pin");
+} catch {
+  pin = null;
+}
+
+export function setPin(value: string | null) {
+  pin = value;
+  try {
+    if (value) sessionStorage.setItem("rs-pin", value);
+    else sessionStorage.removeItem("rs-pin");
+  } catch {
+    /* tab-only */
+  }
+}
+
 function authHeaders(): Record<string, string> {
   const h: Record<string, string> = { "X-Requested-With": "RasteScan" };
   if (bearer) h.Authorization = `Bearer ${bearer}`;
+  if (pin) h["X-Dashboard-Pin"] = pin;
   return h;
 }
 
@@ -278,6 +297,7 @@ export const officerApi = {
   },
   logout: async () => {
     setBearer(null);
+    setPin(null);
     return call<{ ok: boolean }>("/api/v2/auth/logout", json("POST", {}));
   },
   queue: (params: Record<string, string | boolean | undefined> = {}) =>
