@@ -24,7 +24,7 @@ class Settings:
     # Nova model or inference profile id, e.g. "apac.amazon.nova-pro-v1:0" or "eu.amazon.nova-pro-v1:0".
     bedrock_model_id: str = field(default_factory=lambda: _env("BEDROCK_MODEL_ID", "apac.amazon.nova-pro-v1:0"))
     groq_api_key: str = field(default_factory=lambda: _env("GROQ_API_KEY"))
-    groq_model: str = field(default_factory=lambda: _env("GROQ_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct"))
+    groq_model: str = field(default_factory=lambda: _env("GROQ_MODEL", "qwen/qwen3.8-27b"))
     ollama_url: str = field(default_factory=lambda: _env("OLLAMA_URL", "http://localhost:11434"))
     ollama_model: str = field(default_factory=lambda: _env("OLLAMA_MODEL", "qwen2.5vl:7b"))
     s3_bucket: str = field(default_factory=lambda: _env("S3_BUCKET"))

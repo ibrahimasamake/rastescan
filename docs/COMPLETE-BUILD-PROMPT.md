@@ -99,7 +99,7 @@ Replace the single shared PIN with real officer accounts, but keep `DASHBOARD_PI
 The inspector layer already supports four modes in `backend/app/inspector.py`:
 - `bedrock`: Amazon Nova (production when the AWS account is unlocked).
 - `groq`: free Groq key. `export GROQ_API_KEY=...` then `AI_MODE=groq`. Model default
-  `meta-llama/llama-4-scout-17b-16e-instruct`; if Groq has retired it, pick a current vision model from console.groq.com.
+  `qwen/qwen3.8-27b`; if Groq has retired it, pick a current vision model from console.groq.com.
 - `ollama`: fully local and free. `ollama pull qwen2.5vl:7b`, then `AI_MODE=ollama` (`OLLAMA_URL`, `OLLAMA_MODEL` to change).
 - `fake`: canned results for UI work and tests; the app shows a "Test mode" banner.
 Do not weaken the JSON schema in `schema.py`: the server recomputes urgency from the severity score and the model only

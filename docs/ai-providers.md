@@ -23,7 +23,7 @@ and run one real call first; see `docs/aws-setup.md`. Deploy: `RASTESCAN_AI_MODE
 export GROQ_API_KEY=gsk_...
 AI_MODE=groq make api
 ```
-Default model `meta-llama/llama-4-scout-17b-16e-instruct`. If Groq has retired it, pick a current vision model on
+Default model `qwen/qwen3.8-27b`. If Groq has retired it, pick a current vision model on
 console.groq.com and set `GROQ_MODEL=...`. Deploy: `RASTESCAN_AI_MODE=groq GROQ_API_KEY=gsk_... make deploy`.
 
 ## Ollama (local, free)

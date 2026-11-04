@@ -27,7 +27,7 @@ def test_groq_request_and_answer():
         assert req.headers["authorization"] == "Bearer gsk_test"
         return groq_answer(json.dumps(make_result()))
 
-    g = mock(GroqInspector("gsk_test", "meta-llama/llama-4-scout-17b-16e-instruct", "PROMPT"), handler)
+    g = mock(GroqInspector("gsk_test", "qwen/qwen3.8-27b", "PROMPT"), handler)
     assert g.inspect(b"JPEG").hazard_type == "Pothole"
     body = seen[0]
     assert body["response_format"] == {"type": "json_object"} and body["temperature"] == 0
