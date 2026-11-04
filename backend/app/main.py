@@ -7,7 +7,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import auth, routes_citizen, routes_officer, routes_public
+from . import auth, routes_citizen, routes_models, routes_officer, routes_public
 from . import services as svc
 from .config import Settings
 from .db import Database
@@ -72,6 +72,7 @@ def create_app(settings: Settings | None = None, inspector: Inspector | None = N
     app.include_router(routes_citizen.router)
     app.include_router(routes_public.router)
     app.include_router(routes_officer.router)
+    app.include_router(routes_models.router)
 
     if isinstance(ctx.storage, LocalStorage):
         @app.get("/api/photos/{key}")

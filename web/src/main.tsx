@@ -18,6 +18,7 @@ const Wards = lazy(() => import("./pages/Wards"));
 const Queue = lazy(() => import("./officer/Queue"));
 const Review = lazy(() => import("./officer/Review"));
 const Team = lazy(() => import("./officer/Team"));
+const Models = lazy(() => import("./officer/Models"));
 const Analytics = lazy(() => import("./officer/Analytics"));
 const WorkOrder = lazy(() => import("./officer/WorkOrder"));
 const Static = {
@@ -60,6 +61,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/officer" element={<Queue />} />
                 <Route path="/officer/review" element={<Review />} />
                 <Route path="/officer/team" element={<Team />} />
+                <Route path="/officer/models" element={<Models />} />
                 <Route path="/officer/analytics" element={<Analytics />} />
                 <Route path="/officer/work-order" element={<WorkOrder />} />
                 <Route path="/dashboard" element={<Navigate to="/officer" replace />} />

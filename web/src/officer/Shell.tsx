@@ -94,6 +94,7 @@ export function OfficerShell({ children, wide = true }: { children: ReactNode; w
         <NavLink to="/officer/work-order">{t("officer.workOrders")}</NavLink>
         <NavLink to="/officer/analytics">{t("officer.analytics")}</NavLink>
         {officer.role === "admin" && <NavLink to="/officer/team">{t("officer.team")}</NavLink>}
+        {officer.role === "admin" && <NavLink to="/officer/models">AI models</NavLink>}
       </nav>
       {children}
     </div>

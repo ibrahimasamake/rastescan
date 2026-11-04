@@ -138,7 +138,7 @@ export class ApiError extends Error {
 
 export function absUrl(url: string | null | undefined): string {
   if (!url) return "";
-  return url.startsWith("http") ? url : API_BASE + url;
+  return /^(https?:|blob:|data:)/.test(url) ? url : API_BASE + url;
 }
 
 // ---------- officer session ----------
@@ -288,6 +288,33 @@ export interface Analytics {
   totals: { reported: number; resolved: number };
 }
 
+export interface ModelInfo {
+  id: string;
+  provider: "ollama" | "groq" | "bedrock" | "fake" | "yolo";
+  model: string;
+  label: string;
+  installed: boolean;
+  runnable: boolean;
+  size_gb: number | null;
+  note: string;
+  pull: string | null;
+  live: boolean;
+}
+
+export interface ModelList {
+  live: { provider: string; model: string };
+  ollama_running: boolean;
+  ollama_url: string;
+  models: ModelInfo[];
+}
+
+export interface ModelTest {
+  ok: boolean;
+  error: string | null;
+  seconds: number;
+  result: Inspection | null;
+}
+
 export interface OfficerAccount {
   id: number;
   email: string;
@@ -338,5 +365,15 @@ export const officerApi = {
     call<OfficerAccount>("/api/v2/admin/officers", json("POST", body)),
   updateOfficer: (id: number, body: { active?: boolean; password?: string }) =>
     call<OfficerAccount>(`/api/v2/admin/officers/${id}`, json("PATCH", body)),
+  models: () => call<ModelList>("/api/v2/admin/models", { headers: authHeaders() }),
+  testModel: (photo: Blob, provider: string, model: string) => {
+    const form = new FormData();
+    form.append("photo", photo, "photo.jpg");
+    form.append("provider", provider);
+    form.append("model", model);
+    return call<ModelTest>("/api/v2/admin/models/test", { method: "POST", body: form, headers: authHeaders() });
+  },
+  setLiveModel: (provider: string, model: string) =>
+    call<{ live: { provider: string; model: string } }>("/api/v2/admin/models/live", json("POST", { provider, model })),
   adminExportUrl: () => API_BASE + "/api/v2/admin/export.csv",
 };

@@ -205,3 +205,20 @@ def test_rescan_fills_in_a_report_saved_while_the_ai_was_busy(officer_client, in
     done = c.post(f"/api/v2/officer/reports/{code}/rescan", headers=h).json()
     assert done["status"] == "new" and not done["ai_pending"] and done["hazard_type"] == "Pothole"
     assert c.post(f"/api/v2/officer/reports/{code}/rescan", headers=h).status_code == 409
+
+
+def test_model_lab_is_admin_only_and_tests_a_model_without_touching_reports(officer_client):
+    c = officer_client
+    assert c.get("/api/v2/admin/models").status_code == 401
+    h = login(c)
+    listing = c.get("/api/v2/admin/models", headers=h).json()
+    ids = {m["id"] for m in listing["models"]}
+    assert "fake:sample" in ids and "yolo:road" in ids and any(m["provider"] == "ollama" for m in listing["models"])
+    r = c.post("/api/v2/admin/models/test", headers=h, data={"provider": "fake", "model": ""},
+               files={"photo": ("p.jpg", photo_bytes(3), "image/jpeg")}).json()
+    assert r["ok"] and r["result"]["hazard_type"] and r["seconds"] >= 0
+    assert c.get("/api/public/reports").json()["total"] == 0  # nothing was saved
+    bad = c.post("/api/v2/admin/models/test", headers=h, data={"provider": "nope"},
+                 files={"photo": ("p.jpg", photo_bytes(3), "image/jpeg")})
+    assert bad.status_code == 400
+    assert c.post("/api/v2/admin/models/live", headers=h, json={"provider": "fake"}).json()["live"]["provider"] == "fake"

@@ -52,6 +52,9 @@ def parse_inspection(text: str) -> Inspection:
 
 def _why(exc: Exception) -> str:
     resp = getattr(exc, "response", None)
+    if isinstance(resp, dict):  # botocore ClientError: {"Error": {"Code": ..., "Message": ...}}
+        err = resp.get("Error", {})
+        return f"{err.get('Code', 'AWS error')}: {err.get('Message', '')}"[:300]
     if resp is None:
         return str(exc)[:200]
     try:
@@ -274,15 +277,19 @@ class FakeInspector:
         return parse_inspection(json.dumps(_FAKE_RESULTS[pick]))
 
 
-def make_inspector(settings) -> Inspector:
-    mode = settings.ai_mode
-    if mode == "fake":
+def build_inspector(settings, provider: str, model: str | None = None) -> Inspector:
+    """One inspector for a provider and (optionally) a specific model; used at start-up and by the admin Model lab."""
+    if provider == "fake":
         return FakeInspector()
     prompt = load_prompt(settings.prompt_file)
-    if mode == "bedrock":
-        return BedrockInspector(settings.bedrock_model_id, settings.bedrock_region, prompt)
-    if mode == "groq":
-        return GroqInspector(settings.groq_api_key, settings.groq_model, prompt)
-    if mode == "ollama":
-        return OllamaInspector(settings.ollama_url, settings.ollama_model, prompt)
-    raise ValueError(f"Unknown AI_MODE {mode!r}; use bedrock, groq, ollama or fake")
+    if provider == "bedrock":
+        return BedrockInspector(model or settings.bedrock_model_id, settings.bedrock_region, prompt)
+    if provider == "groq":
+        return GroqInspector(settings.groq_api_key, model or settings.groq_model, prompt)
+    if provider == "ollama":
+        return OllamaInspector(settings.ollama_url, model or settings.ollama_model, prompt)
+    raise ValueError(f"Unknown AI_MODE {provider!r}; use bedrock, groq, ollama or fake")
+
+
+def make_inspector(settings) -> Inspector:
+    return build_inspector(settings, settings.ai_mode)

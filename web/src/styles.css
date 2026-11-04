@@ -303,3 +303,8 @@ dialog.modal::backdrop { background: rgba(11, 37, 69, 0.6); }
 .balise { background: none; border: 0; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45)); }
 .balise svg { display: block; }
 .balise-n { position: absolute; top: -4px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--navy); color: #fff; font: 700 0.7rem/18px var(--body); text-align: center; border: 1.5px solid #fff; font-style: normal; }
+
+/* Admin model lab */
+.lab-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); align-items: start; }
+.lab-card.live { outline: 3px solid var(--ok, #2e8b57); }
+.lab-json { max-height: 260px; overflow: auto; background: var(--tint); padding: 8px; border-radius: 6px; white-space: pre-wrap; }
