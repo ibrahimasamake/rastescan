@@ -2,7 +2,8 @@ app_user: rastescan
 app_dir: /opt/rastescan
 data_dir: /var/lib/rastescan
 repo_root: "{{ playbook_dir }}/../.."
-ai_mode: bedrock
+# "bedrock" in production. For a stopgap while Bedrock is locked: export RASTESCAN_AI_MODE=fake (app shows a Test mode banner).
+ai_mode: "{{ lookup('env', 'RASTESCAN_AI_MODE') | default('bedrock', true) }}"
 max_upload_mb: 8
 reports_per_hour: 30
 # Read from your shell so it never lands in git: export RASTESCAN_DASHBOARD_PIN=...

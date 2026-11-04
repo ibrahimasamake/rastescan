@@ -129,9 +129,9 @@
       delay: 2
       until: local_health.status == 200
 
-    - name: Check it is using Bedrock, not test mode
+    - name: Check the app is running in the requested AI mode
       ansible.builtin.assert:
-        that: local_health.json.ai_mode == "bedrock"
+        that: local_health.json.ai_mode == ai_mode
         fail_msg: "The app is running in {{ local_health.json.ai_mode }} mode."
         quiet: true
 
