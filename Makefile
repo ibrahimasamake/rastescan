@@ -36,7 +36,7 @@ lan: ## Show the addresses other devices on your Wi-Fi can use while `make api` 
 
 share: ## One port for everyone on your network: builds the web app and serves it and the API on :8000 (no PIN unless DASHBOARD_PIN is set)
 	cd web && npm run build
-	@IP=$$(ipconfig getifaddr en0 || ipconfig getifaddr en1); echo ""; echo "On this Mac:                 http://localhost:8000"; echo "Phones/laptops on your Wi-Fi: http://$$IP:8000"; echo "(Allow incoming connections if macOS asks. Camera and GPS need https: use `make tunnel`.)"; echo ""
+	@IP=$$(ipconfig getifaddr en0 || ipconfig getifaddr en1); echo ""; echo "On this Mac:                 http://localhost:8000"; echo "Phones/laptops on your Wi-Fi: http://$$IP:8000"; echo "(Allow incoming connections if macOS asks. Camera and GPS need https: use make tunnel.)"; echo ""
 	cd backend && AI_MODE=$${AI_MODE:-fake} DATA_DIR=$(abspath $(DATA)) DASHBOARD_PIN=$${DASHBOARD_PIN:-} CORS_ALLOW_LAN=1 COOKIE_SECURE=false \
 		.venv/bin/uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000
 
