@@ -1,12 +1,14 @@
 /** Leaflet map of reports. Loaded lazily (React.lazy) so the home page does not pay for it up front. */
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CircleMarker, LayersControl, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { Link } from "react-router-dom";
-import { absUrl, type PublicReport } from "../api";
-import { duration, hazardLabel, statusLabel, urgencyLabel } from "../format";
+import { absUrl, type PublicReport, type Urgency } from "../api";
+import { ago, duration, hazardLabel, statusLabel, urgencyLabel } from "../format";
 import { useI18n } from "../i18n";
+import { StatusBadge, UrgencyBadge } from "./Badges";
+import { Icon } from "./Icons";
 import { PIN_COLOURS } from "../pins";
 
 
@@ -114,6 +116,58 @@ function PopupBody({ r }: { r: Located }) {
   );
 }
 
+/** Tells Leaflet the box changed size (entering or leaving full screen) so it redraws tiles to fill it. */
+function ResizeOnChange({ full }: { full: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    const id = setTimeout(() => map.invalidateSize(), 50);
+    return () => clearTimeout(id);
+  }, [full, map]);
+  return null;
+}
+
+const TOUR_MS = 7000;
+const RANK: Record<Urgency, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+
+/** Flies the map to the current stop, pulses its pin, and pauses the tour when the visitor takes over. */
+function TourDriver({ stop, onUser }: { stop: Located | null; onUser: () => void }) {
+  const map = useMap();
+  useEffect(() => {
+    if (stop) map.flyTo([stop.lat, stop.lng], 17, { duration: 2.2 });
+  }, [stop?.code]); // eslint-disable-line react-hooks/exhaustive-deps
+  useMapEvents({ dragstart: onUser, popupopen: onUser });
+  return stop ? (
+    <Marker key={stop.code} position={[stop.lat, stop.lng]} interactive={false} zIndexOffset={-100}
+      icon={L.divIcon({ className: "tour-pulse", html: "<i></i><i></i>", iconSize: [90, 90], iconAnchor: [45, 45] })} />
+  ) : null;
+}
+
+/** The big photo card shown for the current stop. */
+function TourCard({ r, i, n, playing, onPrev, onNext, onToggle }: {
+  r: Located; i: number; n: number; playing: boolean; onPrev: () => void; onNext: () => void; onToggle: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <aside className="tour-card" key={r.code} aria-live="polite">
+      <img src={absUrl(r.after_photo_url ?? r.photo_url)} alt={`${hazardLabel(t, r.hazard_type)} ${r.code}`} />
+      <div className="tour-body">
+        <div className="tour-badges"><UrgencyBadge urgency={r.urgency} /><StatusBadge status={r.public_status} /></div>
+        <h3>{hazardLabel(t, r.hazard_type)} · {r.code}</h3>
+        <p className="small muted">{r.ward?.name ? `${r.ward.name} · ` : ""}{ago(t, r.created_at)}{r.reported_count > 1 ? ` · ${t("tour.people", { n: r.reported_count })}` : ""}</p>
+        {r.repair_recommendation && <p className="small tour-rec" lang="en">{r.repair_recommendation}</p>}
+        <div className="tour-controls">
+          <button type="button" className="btn outline small" onClick={onPrev} aria-label={t("tour.prev")}>‹</button>
+          <button type="button" className="btn outline small" onClick={onToggle}>{playing ? `❚❚ ${t("tour.pause")}` : `▶ ${t("tour.play")}`}</button>
+          <button type="button" className="btn outline small" onClick={onNext} aria-label={t("tour.next")}>›</button>
+          <span className="small muted">{t("tour.count", { i: i + 1, n })}</span>
+          <Link className="small" to={`/r/${r.code}`}>{t("map.view")}</Link>
+        </div>
+      </div>
+      <i className={`tour-progress ${playing ? "run" : ""}`} style={{ animationDuration: `${TOUR_MS}ms` }} />
+    </aside>
+  );
+}
+
 const LAYER_KEY = "rastescan.mapLayer";
 
 function savedLayer(): string {
@@ -139,10 +193,14 @@ function RememberLayer() {
   return null;
 }
 
-export default function MapView({ reports, short = false, fit = true, pick, picked, center }: {
+export default function MapView({ reports, short = false, fit = true, pick, picked, center, tour = false, present = false }: {
   reports: PublicReport[];
   short?: boolean;
   fit?: boolean;
+  /** Auto-play: fly to each report in turn and show its photo card, until the visitor drags the map or pauses. */
+  tour?: boolean;
+  /** Open straight into full screen (for a big display at an event). */
+  present?: boolean;
   pick?: (lat: number, lng: number) => void;
   picked?: [number, number] | null;
   center?: [number, number];
@@ -150,9 +208,46 @@ export default function MapView({ reports, short = false, fit = true, pick, pick
   const { t } = useI18n();
   const points = reports.filter((r): r is Located => r.lat !== null && r.lng !== null);
   const satellite = savedLayer() === "satellite";
+  const [full, setFull] = useState(present);
+  const [idx, setIdx] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const stopsKey = useRef("");
+  const stops = useMemo(() => {
+    if (!tour) return [] as Located[];
+    return reports
+      .filter((r): r is Located => r.lat !== null && r.lng !== null)
+      .sort((a, b) => (a.public_status === "resolved" ? 1 : 0) - (b.public_status === "resolved" ? 1 : 0)
+        || RANK[a.urgency] - RANK[b.urgency] || b.created_at.localeCompare(a.created_at))
+      .slice(0, 30);
+  }, [reports, tour]);
+  const key = stops.map((r) => r.code).join("|");
+  useEffect(() => {
+    if (stopsKey.current !== key) {
+      stopsKey.current = key;
+      setIdx(0);
+    }
+  }, [key]);
+  useEffect(() => {
+    if (!playing || stops.length < 2) return;
+    const id = setTimeout(() => setIdx((i) => (i + 1) % stops.length), TOUR_MS);
+    return () => clearTimeout(id);
+  }, [playing, idx, stops.length]);
+  const stop = stops.length ? stops[Math.min(idx, stops.length - 1)] : null;
+  // Full screen is a fixed overlay (works on phones too). Escape leaves it, and the page behind stops scrolling.
+  useEffect(() => {
+    if (!full) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setFull(false);
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [full]);
   return (
-    <div className={`map-box ${short ? "short" : ""}`}>
-      <MapContainer center={center ?? HOME} zoom={13} scrollWheelZoom={!short} style={{ height: "100%", width: "100%" }}>
+    <div className={`map-box ${short ? "short" : ""} ${full ? "full" : ""}`}>
+      <MapContainer center={center ?? HOME} zoom={13} scrollWheelZoom={!short || full} style={{ height: "100%", width: "100%" }}>
         <LayersControl position="topright" collapsed={false}>
           <LayersControl.BaseLayer checked={!satellite} name={t("map.street")}>
             <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -164,11 +259,24 @@ export default function MapView({ reports, short = false, fit = true, pick, pick
           </LayersControl.BaseLayer>
         </LayersControl>
         <RememberLayer />
+        {tour && <TourDriver stop={stop} onUser={() => setPlaying(false)} />}
+        <ResizeOnChange full={full} />
         <FitTo points={points} fit={fit && !pick} />
         <Pins points={points} />
         {pick && <Picker onPick={pick} />}
         {picked && <CircleMarker center={picked} radius={11} pathOptions={{ color: "#0b2545", weight: 4, fillColor: "#f29a2e", fillOpacity: 1 }} />}
       </MapContainer>
+      {tour && stop && (
+        <TourCard r={stop} i={Math.min(idx, stops.length - 1)} n={stops.length} playing={playing}
+          onPrev={() => { setPlaying(false); setIdx((i) => (i - 1 + stops.length) % stops.length); }}
+          onNext={() => { setPlaying(false); setIdx((i) => (i + 1) % stops.length); }}
+          onToggle={() => setPlaying(!playing)} />
+      )}
+      <div className="map-full-bar">
+        <button type="button" className="btn accent" onClick={() => setFull(!full)} aria-pressed={full}>
+          <Icon name={full ? "shrink" : "expand"} size={18} /> {full ? t("map.exitFullscreen") : t("map.fullscreen")}
+        </button>
+      </div>
     </div>
   );
 }

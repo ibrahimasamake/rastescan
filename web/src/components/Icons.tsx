@@ -14,6 +14,8 @@ const paths: Record<string, string> = {
   down: "M12 4v12m-5-5 5 5 5-5M5 20h14",
   map: "M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zm0 0v14m6-12v14",
   list: "M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01",
+  expand: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
+  shrink: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
   dot: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z",
 };
 

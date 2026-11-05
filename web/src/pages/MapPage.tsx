@@ -33,6 +33,8 @@ export default function MapPage() {
   const key = JSON.stringify(f.apiParams);
   const { data, error, loading, reload } = useAsync(() => api.reports({ ...f.apiParams, per_page: 1000, sort: "urgency" }), [key], 60000);
   const [toast, show] = useToast();
+  // #/map?present=1 opens the map as a full-screen presentation, for a big screen at an event.
+  const present = /[?&]present=1/.test(window.location.hash);
   const noLoc = data ? data.items.filter((r) => r.lat === null).length : 0;
   const share = async () => {
     try {
@@ -55,7 +57,7 @@ export default function MapPage() {
       </div>
       {!!error && !data && <ErrorBox error={error} retry={reload} />}
       <Suspense fallback={<div className="map-box"><Skeleton h="100%" /></div>}>
-        <MapView reports={data?.items ?? []} fit={!loading} />
+        <MapView reports={data?.items ?? []} fit={!loading} tour present={present} />
       </Suspense>
       <Legend />
       {noLoc > 0 && <p className="small muted">{t("map.noLocation", { n: noLoc })}</p>}
