@@ -120,6 +120,7 @@ def test_azure_request_shape_and_reasoning_model_fallback():
     assert url == "https://r.openai.azure.com/openai/v1/chat/completions" and key == "KEY"
     assert first["model"] == "my-deploy" and first["messages"][1]["content"][1]["image_url"]["url"].startswith("data:image/jpeg")
     assert "temperature" not in seen[1][2]  # retried without it
+    assert first["reasoning_effort"] == "minimal" and first["max_completion_tokens"] == 2500
     with pytest.raises(ValueError):
         AzureInspector("", "k", "d", "P")
 
@@ -133,3 +134,25 @@ def test_azure_404_and_401_explain_what_to_check():
         with pytest.raises(RuntimeError) as e:
             a.inspect(b"x")
         assert word in str(e.value) and "s3cret-value-123" not in str(e.value)
+
+
+def test_azure_drops_each_refused_parameter_once_and_remembers():
+    from app.inspector import AzureInspector
+
+    calls = []
+
+    def handler(req: httpx.Request):
+        body = json.loads(req.content)
+        calls.append(sorted(body))
+        if "reasoning_effort" in body:
+            return httpx.Response(400, text="Unrecognized request argument: reasoning_effort")
+        if "temperature" in body:
+            return httpx.Response(400, text="temperature is not supported")
+        return groq_answer(json.dumps(make_result()))
+
+    a = mock(AzureInspector("https://r.openai.azure.com/openai/v1", "k", "d", "P"), handler)
+    assert a.inspect(b"x").hazard_type == "Pothole"
+    first_call_count = len(calls)
+    assert first_call_count == 3
+    a.inspect(b"y")
+    assert len(calls) == first_call_count + 1  # learned: no more wasted attempts

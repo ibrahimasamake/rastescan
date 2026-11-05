@@ -253,14 +253,26 @@ class AzureInspector(_HttpInspector):
             {"role": "user", "content": [{"type": "text", "text": ASK}, {"type": "image_url", "image_url": {"url": data_url}}]},
         ]
 
+    # Parameters a model may refuse. gpt-5 and o-series reasoning models reject temperature; the gpt-4 family rejects
+    # reasoning_effort. On a 400 that names one, it is dropped and remembered, so only the first call pays for the retry.
+    _optional = ("temperature", "reasoning_effort")
+
     def _post(self, messages: list) -> str:
-        body = {"model": self.model, "messages": messages, "temperature": 0, "max_completion_tokens": 1200,
-                "response_format": {"type": "json_object"}}
+        dropped = getattr(self, "_dropped", set())
+        self._dropped = dropped
         headers = {"api-key": self.api_key}
-        resp = self.http.post(self.url, headers=headers, json=body)
-        if resp.status_code == 400 and "temperature" in resp.text:  # reasoning models (gpt-5 family) only accept the default
-            body.pop("temperature")
+        while True:
+            body = {"model": self.model, "messages": messages, "max_completion_tokens": 2500,
+                    "response_format": {"type": "json_object"}}
+            if "temperature" not in dropped:
+                body["temperature"] = 0
+            if "reasoning_effort" not in dropped:
+                body["reasoning_effort"] = "minimal"  # reasoning models: little hidden thinking, so the answer is not cut off
             resp = self.http.post(self.url, headers=headers, json=body)
+            culprit = next((p for p in self._optional if p not in dropped and resp.status_code == 400 and p in resp.text), None)
+            if culprit is None:
+                break
+            dropped.add(culprit)
         if resp.status_code == 404:
             raise RuntimeError(f"Azure has no deployment named '{self.model}'. AZURE_DEPLOYMENT must be the deployment NAME you "
                                f"typed when deploying the model (Foundry, Deployments), not the model name. Azure said: {resp.text[:200]}")
