@@ -476,3 +476,44 @@ dialog.modal::backdrop { background: rgba(11, 37, 69, 0.6); }
   .reel-content { margin-top: 47svh; padding-block: 0 56px; }
   .reel-caption { top: 12px; right: 12px; }
 }
+
+/* Analysis scene: shown while the AI inspects the citizen's photo */
+.an { position: fixed; inset: 0; z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 20px; color: #fff; overflow: auto; }
+.an-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 20%, #17407a 0%, #0b2545 45%, #050f1f 100%); }
+.an-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 3; }
+.an-card { position: relative; z-index: 2; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 36px; align-items: center; width: min(1020px, 100%); }
+.an-frame { position: relative; padding: 14px; -webkit-box-reflect: below 10px linear-gradient(transparent 68%, rgba(255,255,255,.22)); }
+.an-photo { position: relative; overflow: hidden; border-radius: 10px; background: #000; aspect-ratio: 4 / 5; max-height: 66vh; margin-inline: auto; box-shadow: 0 20px 60px rgba(0,0,0,.55); }
+.an-img { width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: 50% 60%; }
+.an-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(120,200,255,.16) 1px, transparent 1px), linear-gradient(90deg, rgba(120,200,255,.16) 1px, transparent 1px); background-size: 40px 40px; mix-blend-mode: screen; }
+.an-scan { position: absolute; left: 0; right: 0; height: 3px; top: 0; background: #7fd4ff; box-shadow: 0 0 18px 6px rgba(127,212,255,.8), 0 -60px 60px 10px rgba(127,212,255,.18); }
+.an-shine { position: absolute; inset: 0; background: linear-gradient(105deg, transparent 32%, rgba(255,255,255,.5) 47%, rgba(255,255,255,.12) 52%, transparent 66%); pointer-events: none; }
+.an-corner { position: absolute; width: 34px; height: 34px; border: 0 solid #7fd4ff; }
+.an-corner.tl { left: 0; top: 0; border-width: 4px 0 0 4px; border-radius: 6px 0 0 0; } .an-corner.tr { right: 0; top: 0; border-width: 4px 4px 0 0; border-radius: 0 6px 0 0; }
+.an-corner.bl { left: 0; bottom: 0; border-width: 0 0 4px 4px; border-radius: 0 0 0 6px; } .an-corner.br { right: 0; bottom: 0; border-width: 0 4px 4px 0; border-radius: 0 0 6px 0; }
+.an-side { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.an-side h2 { color: #fff; font-size: clamp(1.4rem, 3vw, 2rem); }
+.an-ring { width: 120px; height: 120px; }
+.an-ring-bg { fill: none; stroke: rgba(255,255,255,.18); stroke-width: 8; }
+.an-ring-fg { fill: none; stroke: var(--saffron); stroke-width: 8; stroke-linecap: round; filter: drop-shadow(0 0 6px rgba(242,154,46,.7)); }
+.an-pct { fill: #fff; font: 700 24px var(--body); }
+.an-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.an-steps li { display: flex; align-items: center; gap: 12px; font-size: 1.05rem; color: rgba(255,255,255,.4); transition: color .4s, transform .4s; }
+.an-steps li i { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); display: grid; place-items: center; font-style: normal; font-size: .85rem; transition: all .4s; }
+.an-steps li.now { color: #fff; transform: translateX(6px); }
+.an-steps li.now i { border-color: var(--saffron); border-top-color: transparent; animation: an-spin .9s linear infinite; }
+.an-steps li.done { color: rgba(255,255,255,.88); }
+.an-steps li.done i { background: #2fbf71; border-color: #2fbf71; color: #fff; }
+.an-hint { color: rgba(255,255,255,.65); margin: 0; }
+@keyframes an-spin { to { transform: rotate(360deg); } }
+/* Result reveal: a glass reflection across the photo */
+.reflet { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 32%, rgba(255,255,255,.6) 47%, rgba(255,255,255,.12) 52%, transparent 66%); opacity: 0; }
+@media (max-width: 800px) {
+  .an-card { grid-template-columns: 1fr; gap: 18px; }
+  .an-frame { -webkit-box-reflect: unset; padding: 10px; }
+  .an-photo { aspect-ratio: 4 / 3; max-height: 34vh; }
+  .an-side { align-items: center; text-align: center; }
+  .an-ring { width: 88px; height: 88px; }
+  .an-steps li { font-size: .95rem; }
+}
+@media (prefers-reduced-motion: reduce) { .an-steps li.now i { animation: none; } .an-scan, .an-shine { display: none; } }

@@ -1,6 +1,8 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { gsap } from "gsap";
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError, type Report } from "../api";
+import AnalysisStage from "../components/AnalysisStage";
 import { UrgencyBadge } from "../components/Badges";
 import { Icon } from "../components/Icons";
 import { PageHead } from "../components/Layout";
@@ -9,6 +11,7 @@ import { Skeleton } from "../components/States";
 import { deviceId, hazardLabel } from "../format";
 import { useI18n } from "../i18n";
 import type { Key } from "../i18n/en";
+import { calmMotion } from "../motion";
 import { queue } from "../outbox";
 import { shrinkPhoto } from "../photo";
 import { usePortal } from "../portal";
@@ -50,13 +53,42 @@ function Result({ r, again }: { r: Report; again: () => void }) {
   const res = r.result;
   const trackCode = r.merged_into ?? r.code;
   const published = !["no_damage", "review"].includes(r.status);
+  const box = useRef<HTMLElement>(null);
+
+  // Reveal: the photo wipes in, a reflection sweeps across it, the AI draws its boxes, then the details cascade.
+  useLayoutEffect(() => {
+    const calm = calmMotion();
+    const photo = box.current?.querySelector<HTMLElement>(".photo");
+    const reflet = document.createElement("div");
+    reflet.className = "reflet";
+    photo?.appendChild(reflet);
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+      tl.from(".res-ok", { y: calm ? 0 : -18, opacity: 0, duration: 0.7 }, 0.1);
+      if (photo) {
+        if (calm) tl.from(photo, { opacity: 0, duration: 0.6 }, 0.1);
+        else {
+          tl.from(photo, { clipPath: "inset(0 0 100% 0)", duration: 1.1, ease: "power3.inOut" }, 0.1)
+            .from(".photo img", { scale: 1.25, duration: 1.6, ease: "power2.out" }, 0.1)
+            .fromTo(reflet, { xPercent: -150, opacity: 1 }, { xPercent: 250, duration: 1.3, ease: "power2.inOut" }, 0.9);
+        }
+      }
+      if (!calm) tl.from(".box", { scale: 1.7, opacity: 0, duration: 0.6, stagger: 0.18, ease: "back.out(2)" }, 1.1);
+      else tl.from(".box", { opacity: 0, duration: 0.5 }, 0.8);
+      tl.from(".res-detail > *", { y: calm ? 0 : 26, opacity: 0, duration: 0.7, stagger: 0.09 }, 1.0)
+        .from(".res-detail .meter i", { width: 0, duration: 1.2, ease: "power2.out" }, 1.3)
+        .from(".res-buttons .btn", { y: calm ? 0 : 18, opacity: 0, duration: 0.6, stagger: 0.1 }, 1.5);
+    }, box);
+    return () => { ctx.revert(); reflet.remove(); };
+  }, []);
+
   return (
-    <section className="section narrow" aria-live="polite">
-      <p className="ok-text" style={{ fontSize: "1.1rem" }}>{t(o.key, o.vars)}</p>
+    <section className="section narrow" aria-live="polite" ref={box}>
+      <p className="ok-text res-ok" style={{ fontSize: "1.1rem" }}>{t(o.key, o.vars)}</p>
       <div className="card">
         <PhotoWithBox src={r.photo_url} result={res} urgency={r.urgency} alt={t("report.photoAlt", { hazard: hazardLabel(t, res.hazard_type), code: r.code })} />
         {res.hazard_type !== "None" && !r.ai_pending && (
-          <div className="card pad section" style={{ border: 0 }}>
+          <div className="card pad section res-detail" style={{ border: 0 }}>
             <div className="status-head">
               <h2>{hazardLabel(t, res.hazard_type)}</h2>
               <UrgencyBadge urgency={r.urgency} />
@@ -68,7 +100,7 @@ function Result({ r, again }: { r: Report; again: () => void }) {
           </div>
         )}
       </div>
-      <div className="btn-row">
+      <div className="btn-row res-buttons">
         {published && <Link className="btn" to={`/r/${trackCode}`}>{t("new.track")}</Link>}
         <button className="btn outline" onClick={again}>{t("new.another")}</button>
       </div>
@@ -89,6 +121,9 @@ export default function NewReport() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Report | null>(null);
   const [queued, setQueued] = useState(false);
+  // form -> analysing (the scene plays while the AI works) -> revealing (curtain lifts over the result) -> result
+  const [stage, setStage] = useState<"form" | "analysing" | "revealing" | "result">("form");
+  const [stagePhoto, setStagePhoto] = useState<string | null>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
@@ -128,11 +163,14 @@ export default function NewReport() {
         await keep();
         return;
       }
+      setStagePhoto(URL.createObjectURL(blob));
+      setStage("analysing");
       const r = await api.submit(blob, deviceId(), pos ? { lat: pos.lat, lng: pos.lng } : null, note.trim(), email.trim());
       setResult(r);
       reset();
       refreshStats();
     } catch (e) {
+      setStage("form");
       if (e instanceof ApiError && e.status === 0) {
         try {
           await keep();
@@ -147,11 +185,24 @@ export default function NewReport() {
     }
   };
 
-  if (result) {
-    return <div className="wrap page"><Result r={result} again={() => setResult(null)} /></div>;
+  const showResult = !!result && (stage === "revealing" || stage === "result");
+  const scene = (stage === "analysing" || stage === "revealing") && stagePhoto ? (
+    <AnalysisStage photo={stagePhoto} ready={!!result} onReveal={() => setStage("revealing")}
+      onDone={() => { setStage("result"); setStagePhoto((u) => { if (u) URL.revokeObjectURL(u); return null; }); }} />
+  ) : null;
+
+  if (showResult) {
+    return (
+      <>
+        <div className="wrap page"><Result r={result!} again={() => { setResult(null); setStage("form"); }} /></div>
+        {scene}
+      </>
+    );
   }
 
   return (
+    <>
+      {scene}
     <div className="wrap page">
       <div className="section narrow">
         <PageHead title={t("new.title")} lead={t("new.lead")} />
@@ -209,5 +260,6 @@ export default function NewReport() {
         <p className="small muted">{t("new.privacy")}</p>
       </div>
     </div>
+    </>
   );
 }

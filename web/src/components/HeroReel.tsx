@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { absUrl, api, type Urgency } from "../api";
 import { ago, hazardLabel, inr, urgencyLabel } from "../format";
 import { useI18n } from "../i18n";
+import { calmMotion } from "../motion";
 import { usePortal } from "../portal";
 import { Icon } from "./Icons";
 
@@ -93,7 +94,7 @@ export default function HeroReel() {
   const tRef = useRef(t);
   tRef.current = t;
   // Honour the visitor's "reduce motion" setting, unless the link says ?motion=on (for a demo laptop that has it switched on).
-  const reduced = useMemo(() => (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false) && !/[?&]motion=on/.test(window.location.href), []);
+  const reduced = useMemo(calmMotion, []);
   const words = t("home.title").split(" ");
 
   // The shots: real news photos of Indian potholes (public/banner, credited on screen) alternating with the worst live reports.
