@@ -261,6 +261,12 @@ class AzureInspector(_HttpInspector):
         if resp.status_code == 400 and "temperature" in resp.text:  # reasoning models (gpt-5 family) only accept the default
             body.pop("temperature")
             resp = self.http.post(self.url, headers=headers, json=body)
+        if resp.status_code == 404:
+            raise RuntimeError(f"Azure has no deployment named '{self.model}'. AZURE_DEPLOYMENT must be the deployment NAME you "
+                               f"typed when deploying the model (Foundry, Deployments), not the model name. Azure said: {resp.text[:200]}")
+        if resp.status_code in (401, 403):
+            raise RuntimeError(f"Azure rejected the key or endpoint (HTTP {resp.status_code}). Check AZURE_KEY belongs to this "
+                               f"resource and AZURE_ENDPOINT is its /openai/v1 address. Azure said: {resp.text[:200]}")
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"] or ""
 

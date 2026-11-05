@@ -122,3 +122,14 @@ def test_azure_request_shape_and_reasoning_model_fallback():
     assert "temperature" not in seen[1][2]  # retried without it
     with pytest.raises(ValueError):
         AzureInspector("", "k", "d", "P")
+
+
+def test_azure_404_and_401_explain_what_to_check():
+    from app.inspector import AzureInspector
+
+    for status, word in ((404, "no deployment named 'gone'"), (401, "rejected the key")):
+        a = mock(AzureInspector("https://r.openai.azure.com/openai/v1", "KEY", "gone", "P"),
+                 lambda req, s=status: httpx.Response(s, text='{"error":{"code":"DeploymentNotFound"}}'))
+        with pytest.raises(RuntimeError) as e:
+            a.inspect(b"x")
+        assert word in str(e.value) and "KEY" not in str(e.value)

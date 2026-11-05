@@ -16,7 +16,7 @@ from fastapi import HTTPException
 from . import triage
 from .config import Settings
 from .db import Database
-from .inspector import Inspector, InspectionError, InspectorBusy
+from .inspector import Inspector, InspectionError, InspectorBusy, _why
 from .ratelimit import RateLimiter
 from .schema import Inspection, needs_human_review, urgency_for
 from .storage import LocalStorage
@@ -112,7 +112,7 @@ def inspect(ctx: Ctx, jpeg: bytes, inspector: Inspector | None = None) -> Inspec
     except (InspectionError, InspectorBusy):
         raise
     except Exception as exc:  # network, permissions, provider outage
-        log.exception("inspection failed")
+        log.error("inspection failed: %s", _why(exc))
         raise HTTPException(503, "The AI inspector is not reachable right now. Try again in a moment.") from exc
     ctx.db.cache(sha, ctx.model_tag, result.model_dump_json())
     return result
