@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { absUrl, detectionsOf, type Inspection, type PublicReport, type TimelineEvent, type Urgency } from "../api";
+import { absUrl, api, detectionsOf, type Inspection, type PublicReport, type TimelineEvent, type Urgency } from "../api";
 import { ago, hazardLabel, statusLabel, urgencyLabel } from "../format";
 import { useI18n } from "../i18n";
 import type { Key } from "../i18n/en";
 import { DemoBadge, StatusBadge, UrgencyBadge } from "./Badges";
+import { useAsync } from "./States";
 import { Icon } from "./Icons";
 
 /** The photo with the damage boxed, drawn from the model's 0–1000 coordinates. */
@@ -152,5 +153,26 @@ export function ReportCard({ r }: { r: PublicReport }) {
         </div>
       </div>
     </Link>
+  );
+}
+
+/** A self-refreshing list of the newest public events, so the portal visibly moves while people use it. */
+export function ActivityFeed({ limit = 8 }: { limit?: number }) {
+  const { t } = useI18n();
+  const feed = useAsync(() => api.activity(limit), [limit], 8000);
+  const items = feed.data ?? [];
+  if (!items.length) return <p className="muted">{t("live.empty")}</p>;
+  return (
+    <ul className="live" aria-live="polite">
+      {items.map((e) => (
+        <li key={`${e.code}-${e.event}-${e.at}`}>
+          <span className={`dotu u-${e.urgency}`} aria-hidden="true" />
+          <Link to={`/r/${e.code}`}>{e.code}</Link>
+          <span>{t(`live.${e.event}` as Key, { hazard: hazardLabel(t, e.hazard_type), urgency: urgencyLabel(t, e.urgency), value: e.value })}</span>
+          {e.ward && <span className="muted small">{e.ward.name}</span>}
+          <time className="muted small" dateTime={e.at}>{ago(t, e.at)}</time>
+        </li>
+      ))}
+    </ul>
   );
 }

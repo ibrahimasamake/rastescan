@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, ApiError, type PublicDetail } from "../api";
 import { DemoBadge, StatusBadge, UrgencyBadge } from "../components/Badges";
@@ -6,7 +6,7 @@ import { Icon } from "../components/Icons";
 import { PageHead } from "../components/Layout";
 import { BeforeAfter, DetectionList, PhotoWithBox, SeverityMeter, Timeline } from "../components/Report";
 import { ErrorBox, Skeleton, Toast, useAsync, useToast } from "../components/States";
-import { CLOSED, deviceId, hazardLabel, sla } from "../format";
+import { CLOSED, deviceId, hazardLabel, inr, sla } from "../format";
 import { useI18n } from "../i18n";
 import type { Key } from "../i18n/en";
 
@@ -157,6 +157,19 @@ export default function ReportPage() {
               <p className="rec" lang="en">{res.repair_recommendation}</p>
             </div>
             <DetectionList result={res} />
+            {r.repair_estimate.total_inr > 0 && (
+              <div className="section cost-card">
+                <h3>{t("cost.title")}</h3>
+                <p className="cost-total">{t("cost.total", { amount: inr(r.repair_estimate.total_inr) })}</p>
+                <dl className="facts">
+                  {r.repair_estimate.lines.map((l) => (
+                    <Fragment key={l.item}><dt>{l.item} ({num(l.qty, 2)} {l.unit})</dt><dd className="num">{inr(l.cost_inr)}</dd></Fragment>
+                  ))}
+                  <dt>{t("cost.labour", { n: r.repair_estimate.crew_hours })}</dt><dd className="num">{inr(r.repair_estimate.labour_inr)}</dd>
+                </dl>
+                <p className="small muted">{t("cost.note")}</p>
+              </div>
+            )}
           </section>
 
           <section className="card pad section" aria-labelledby="tl-h">

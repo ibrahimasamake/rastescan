@@ -87,6 +87,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <NavLink to="/map">{t("nav.map")}</NavLink>
           <NavLink to="/reports">{t("nav.list")}</NavLink>
           <NavLink to="/wards">{t("nav.wards")}</NavLink>
+          <NavLink to="/impact">{t("nav.impact")}</NavLink>
           <NavLink to="/mine">{t("nav.mine")}</NavLink>
           <span className="spacer" />
           <NavLink to="/officer">{officer.signed_in ? t("nav.dashboard") : t("nav.officer")}</NavLink>

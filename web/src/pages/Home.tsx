@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { Icon } from "../components/Icons";
-import { ReportCard } from "../components/Report";
+import { ActivityFeed, ReportCard } from "../components/Report";
 import { Empty, Skeleton, useAsync } from "../components/States";
 import { useI18n } from "../i18n";
 import { usePortal } from "../portal";
@@ -78,6 +78,11 @@ export default function Home() {
               <MapView reports={open.data?.items ?? []} short />
             </Suspense>
           </WhenVisible>
+        </section>
+
+        <section className="section" aria-labelledby="live-h">
+          <h2 id="live-h">{t("live.title")}</h2>
+          <ActivityFeed />
         </section>
 
         <section className="section" aria-labelledby="resolved-h">

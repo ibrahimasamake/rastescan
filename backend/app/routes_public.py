@@ -151,6 +151,16 @@ def stats(request: Request, ctx: Ctx = Depends(get_ctx)):
     return cached_json(request, svc.stats(ctx))
 
 
+@router.get("/impact")
+def impact(request: Request, days: int = Query(14, ge=7, le=90), ctx: Ctx = Depends(get_ctx)):
+    return cached_json(request, svc.impact(ctx, days), max_age=20)
+
+
+@router.get("/activity")
+def activity(request: Request, limit: int = Query(15, ge=1, le=50), ctx: Ctx = Depends(get_ctx)):
+    return cached_json(request, svc.activity(ctx, limit), max_age=5)
+
+
 @router.get("/wards")
 def wards(request: Request, ctx: Ctx = Depends(get_ctx)):
     return cached_json(request, svc.ward_scoreboard(ctx), max_age=60)

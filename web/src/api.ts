@@ -69,8 +69,18 @@ export interface TimelineEvent {
   detail: Record<string, string | number | boolean | null> | null;
 }
 
+export interface RepairEstimate {
+  total_inr: number;
+  materials_inr: number;
+  labour_inr: number;
+  crew_hours: number;
+  lines: { item: string; qty: number; unit: string; cost_inr: number }[];
+  indicative: boolean;
+}
+
 export interface PublicDetail extends PublicReport {
   result: Inspection;
+  repair_estimate: RepairEstimate;
   after_result: Inspection | null;
   confidence: number;
   dismiss_reason: string | null;
@@ -118,6 +128,32 @@ export interface WardScore {
   avg_days_to_resolve: number | null;
   pct_within_deadline: number | null;
   rank: number;
+}
+
+export interface Impact {
+  tickets: number;
+  open: number;
+  fixed: number;
+  open_backlog_inr: number;
+  repaired_value_inr: number;
+  avg_hours_to_fix: number | null;
+  pct_on_time: number | null;
+  citizen_reports: number;
+  by_hazard: [string, number][];
+  hotspots: { code: string; name: string; open: number; critical: number; cost_inr: number }[];
+  trend: { date: string; reported: number; resolved: number }[];
+}
+
+export interface ActivityItem {
+  at: string;
+  event: "reported" | "ai_assessed" | "assigned" | "status" | "repair_photo" | "duplicate_added";
+  actor: string;
+  value: string | null;
+  code: string;
+  hazard_type: Hazard;
+  urgency: Urgency;
+  ward: Ward | null;
+  is_demo: boolean;
 }
 
 export interface PortalConfig {
@@ -221,6 +257,8 @@ export const api = {
   config: () => call<PortalConfig>("/api/public/config"),
   stats: () => call<Stats>("/api/public/stats"),
   wards: () => call<WardScore[]>("/api/public/wards"),
+  impact: (days = 14) => call<Impact>("/api/public/impact" + query({ days })),
+  activity: (limit = 12) => call<ActivityItem[]>("/api/public/activity" + query({ limit })),
   recentlyResolved: () => call<PublicReport[]>("/api/public/recently-resolved"),
   reports: (params: Record<string, string | number | boolean | undefined>) =>
     call<Page<PublicReport>>("/api/public/reports" + query(params)),

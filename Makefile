@@ -2,7 +2,7 @@
 PY := backend/.venv/bin/python
 DATA ?= backend/data
 
-.PHONY: lan share tunnel setup api web test seed-demo unseed-demo evaluate android
+.PHONY: lan share tunnel setup api web test seed-demo unseed-demo live-demo evaluate android
 
 setup: ## Install backend and web dependencies
 	cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
@@ -24,6 +24,9 @@ seed-demo: ## Add 40 demo reports (clearly marked) to DATA (default backend/data
 
 unseed-demo: ## Take every demo report out of DATA again
 	DATA_DIR=$(abspath $(DATA)) $(PY) scripts/seed_demo.py --remove
+
+live-demo: ## Keep a running API busy for a demo: new reports, assignments, fixes (start `REPORTS_PER_HOUR=2000 make api` first)
+	$(PY) scripts/live_demo.py --every $${EVERY:-8}
 
 evaluate: ## Compare AI providers on test-photos/ (PROVIDERS=groq,bedrock PAUSE=2)
 	$(PY) scripts/evaluate.py --providers $${PROVIDERS:-groq} --pause $${PAUSE:-0}

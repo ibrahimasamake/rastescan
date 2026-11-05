@@ -308,3 +308,23 @@ dialog.modal::backdrop { background: rgba(11, 37, 69, 0.6); }
 .lab-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); align-items: start; }
 .lab-card.live { outline: 3px solid var(--ok, #2e8b57); }
 .lab-json { max-height: 260px; overflow: auto; background: var(--tint); padding: 8px; border-radius: 6px; white-space: pre-wrap; }
+
+/* Impact page, live feed, cost card */
+.impact-stats { margin: 16px 0; }
+.bars { display: flex; align-items: flex-end; gap: 4px; height: 150px; margin: 12px 0; }
+.bar-col { flex: 1; height: 100%; display: flex; align-items: flex-end; gap: 1px; }
+.bar { flex: 1; min-height: 2px; border-radius: 2px 2px 0 0; display: block; transition: height .5s; }
+.bar.rep, .key.rep { background: var(--navy-3); }
+.bar.res, .key.res { background: var(--ok); }
+.key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 10px; }
+.hbars, .hot, .live { list-style: none; margin: 0; padding: 0; }
+.hbars li { display: grid; grid-template-columns: 9rem 1fr auto; align-items: center; gap: 10px; padding: 5px 0; }
+.hbars i { display: block; height: 12px; background: var(--navy-3); border-radius: 6px; min-width: 4px; transition: width .5s; }
+.hot li { display: flex; flex-direction: column; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.live li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 8px 0; border-bottom: 1px solid var(--line); animation: live-in .4s ease; }
+.dotu { width: 10px; height: 10px; border-radius: 50%; align-self: center; background: var(--low); }
+.dotu.u-CRITICAL { background: var(--crit); } .dotu.u-HIGH { background: var(--high); } .dotu.u-MEDIUM { background: var(--med); }
+.cost-card { border-top: 1px solid var(--line); padding-top: 14px; }
+.cost-total { font: 700 1.5rem/1.2 var(--head); color: var(--navy); margin: 4px 0 10px; }
+@keyframes live-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .live li, .bar, .hbars i { animation: none; transition: none; } }

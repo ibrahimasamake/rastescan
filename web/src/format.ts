@@ -51,3 +51,8 @@ export function deviceId(): string {
 }
 
 export const CLOSED = new Set(["verified", "dismissed", "no_damage"]);
+
+/** Rupees in the Indian digit grouping, e.g. ₹1,25,000. */
+export function inr(n: number): string {
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+}

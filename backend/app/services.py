@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 
-from . import triage
+from . import costing, triage
 from .config import Settings
 from .db import Database
 from .inspector import Inspector, InspectionError, InspectorBusy, _why
@@ -197,6 +197,7 @@ def public_timeline(ctx: Ctx, report_id: int) -> list[dict]:
 def public_detail(ctx: Ctx, row: dict) -> dict:
     item = public_item(ctx, row)
     item["result"] = json.loads(row["ai_json"])
+    item["repair_estimate"] = costing.estimate(Inspection.model_validate(item["result"]))
     item["after_result"] = json.loads(row["after_ai_json"]) if row.get("after_ai_json") else None
     item["confidence"] = row["confidence"]
     item["dismiss_reason"] = row.get("dismiss_reason")
@@ -405,6 +406,71 @@ def stats(ctx: Ctx) -> dict:
         "last_updated": db.scalar("SELECT MAX(updated_at) FROM reports"),
         "ai_mode": ctx.inspector.mode,
     }
+
+
+def impact(ctx: Ctx, days: int = 14) -> dict:
+    """Headline numbers for the public Impact page. Counts each ticket once (merged duplicates fold into their parent)."""
+    t = now()
+    marks = ",".join("?" for _ in PUBLIC_INTERNAL)
+    rows = ctx.db.query(f"SELECT * FROM reports WHERE parent_id IS NULL AND status IN ({marks})", PUBLIC_INTERNAL)
+    open_cost = fixed_cost = 0
+    by_hazard: dict[str, int] = {}
+    by_ward: dict[str, dict] = {}
+    open_n = fixed_n = on_time = 0
+    hours: list[float] = []
+    for r in rows:
+        cost = costing.estimate(Inspection.model_validate_json(r["ai_json"]))["total_inr"]
+        by_hazard[r["hazard_type"]] = by_hazard.get(r["hazard_type"], 0) + 1
+        if r["status"] in OPEN:
+            open_n += 1
+            open_cost += cost
+            w = by_ward.setdefault(r["ward_code"] or "?", {"open": 0, "critical": 0, "cost_inr": 0})
+            w["open"] += 1
+            w["critical"] += r["urgency"] in ("CRITICAL", "HIGH")
+            w["cost_inr"] += cost
+        elif r["status"] == "verified":
+            fixed_n += 1
+            fixed_cost += cost
+            if r["resolved_at"]:
+                hours.append((parse_iso(r["resolved_at"]) - parse_iso(r["created_at"])).total_seconds() / 3600)
+                on_time += bool(r["due_at"] and r["resolved_at"] <= r["due_at"])
+    start = _local_day_start(ctx, t) - timedelta(days=days - 1)
+    trend = []
+    for i in range(days):
+        day = start + timedelta(days=i)
+        lo, hi = iso(day), iso(day + timedelta(days=1))
+        trend.append({
+            "date": day.astimezone(ctx.tz).date().isoformat(),
+            "reported": ctx.db.scalar("SELECT COUNT(*) FROM reports WHERE created_at >= ? AND created_at < ? "
+                                      "AND status != 'no_damage'", (lo, hi)),
+            "resolved": ctx.db.scalar("SELECT COUNT(*) FROM reports WHERE status = 'verified' AND parent_id IS NULL "
+                                      "AND resolved_at >= ? AND resolved_at < ?", (lo, hi)),
+        })
+    hotspots = sorted(({"code": c, "name": ctx.ward_names.get(c, c), **v} for c, v in by_ward.items()),
+                      key=lambda h: (-h["critical"], -h["open"]))[:5]
+    return {
+        "tickets": len(rows), "open": open_n, "fixed": fixed_n,
+        "open_backlog_inr": open_cost, "repaired_value_inr": fixed_cost,
+        "avg_hours_to_fix": round(sum(hours) / len(hours), 1) if hours else None,
+        "pct_on_time": round(100 * on_time / len(hours)) if hours else None,
+        "citizen_reports": sum(reported_count(r) for r in ctx.db.query(COUNTS_SQL + f" WHERE r.parent_id IS NULL AND r.status IN ({marks})", PUBLIC_INTERNAL)),
+        "by_hazard": sorted(by_hazard.items(), key=lambda kv: -kv[1]),
+        "hotspots": hotspots, "trend": trend,
+        "indicative": True,
+    }
+
+
+def activity(ctx: Ctx, limit: int = 15) -> list[dict]:
+    """The newest public events across all reports, for the live feed. Only fields already public."""
+    marks = ",".join("?" for _ in PUBLIC_INTERNAL)
+    rows = ctx.db.query(
+        "SELECT h.at, h.event, h.actor, h.new_value, r.code, r.hazard_type, r.urgency, r.ward_code, r.is_demo "
+        f"FROM status_history h JOIN reports r ON r.id = h.report_id WHERE h.public = 1 AND r.status IN ({marks}) "
+        "AND h.event IN ('reported','ai_assessed','assigned','status','repair_photo','duplicate_added') "
+        "ORDER BY h.at DESC, h.id DESC LIMIT ?", (*PUBLIC_INTERNAL, limit))
+    return [{"at": r["at"], "event": r["event"], "actor": r["actor"], "value": r["new_value"], "code": r["code"],
+             "hazard_type": r["hazard_type"], "urgency": r["urgency"], "ward": ward_info(ctx, r["ward_code"]),
+             "is_demo": bool(r["is_demo"])} for r in rows]
 
 
 def ward_scoreboard(ctx: Ctx) -> list[dict]:

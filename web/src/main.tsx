@@ -15,6 +15,7 @@ const MyReports = lazy(() => import("./pages/MyReports"));
 const MapPage = lazy(() => import("./pages/MapPage"));
 const ListPage = lazy(() => import("./pages/ListPage"));
 const Wards = lazy(() => import("./pages/Wards"));
+const Impact = lazy(() => import("./pages/Impact"));
 const Queue = lazy(() => import("./officer/Queue"));
 const Review = lazy(() => import("./officer/Review"));
 const Team = lazy(() => import("./officer/Team"));
@@ -54,6 +55,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/map" element={<MapPage />} />
                 <Route path="/reports" element={<ListPage />} />
                 <Route path="/wards" element={<Wards />} />
+                <Route path="/impact" element={<Impact />} />
                 <Route path="/about" element={<Static.About />} />
                 <Route path="/privacy" element={<Static.Privacy />} />
                 <Route path="/accessibility" element={<Static.Accessibility />} />
