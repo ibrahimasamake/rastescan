@@ -17,6 +17,7 @@ make web            # Vite dev server on :5173, proxies /api to :8000
 make test           # what CI runs: pytest, then eslint + tsc -b + vite build
 make seed-demo      # 40 demo reports into backend/data (make unseed-demo removes them)
 make share          # builds web, serves web + API on one port :8000 for other devices (make tunnel adds a public https link)
+make seed-india     # ~200 DEMO reports from real RDD2022 photos (data/india-cases, CC BY, see ATTRIBUTION.md) spread over 20 Indian cities; locations/dates are made up, labels come from the dataset, no AI is run. `make api`/`share` use data/wards-india.geojson (Bengaluru wards + city boxes) via WARDS_FILE
 make live-demo      # drives a running API (start it with REPORTS_PER_HOUR=2000 make api): new reports, assignments, fixes
 make evaluate       # compare AI providers on test-photos/ (PROVIDERS=groq,bedrock)
 make android        # vite build --mode android + cap sync

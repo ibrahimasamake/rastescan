@@ -425,10 +425,11 @@ def impact(ctx: Ctx, days: int = 14) -> dict:
         if r["status"] in OPEN:
             open_n += 1
             open_cost += cost
-            w = by_ward.setdefault(r["ward_code"] or "?", {"open": 0, "critical": 0, "cost_inr": 0})
-            w["open"] += 1
-            w["critical"] += r["urgency"] in ("CRITICAL", "HIGH")
-            w["cost_inr"] += cost
+            if r["ward_code"]:  # reports outside every ward are in the totals but cannot be a hotspot
+                w = by_ward.setdefault(r["ward_code"], {"open": 0, "critical": 0, "cost_inr": 0})
+                w["open"] += 1
+                w["critical"] += r["urgency"] in ("CRITICAL", "HIGH")
+                w["cost_inr"] += cost
         elif r["status"] == "verified":
             fixed_n += 1
             fixed_cost += cost

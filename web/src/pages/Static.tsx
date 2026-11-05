@@ -14,6 +14,7 @@ export function About() {
     <div className="wrap page narrow">
       <PageHead title={t("about.title")} />
       <p>{t("about.body")}</p>
+      <p className="small muted">{t("about.dataCredit")}</p>
       <section id="how" className="section">
         <h2>{t("how.title")}</h2>
         <ol className="steps">
