@@ -417,6 +417,9 @@ export const en = {
   // impact, live feed, cost
   "about.dataCredit": "Demo reports use road photos from the open RDD2022 dataset (Arya, Maeda, Ghosh, Toshniwal and Sekimoto, 2024, CC BY 4.0). Places and dates in the demo are made up and every demo report is marked as such.",
   "hero.kicker": "The real problem on our roads",
+  "hero.newsChip": "Pothole on an Indian road",
+  "hero.newsTitle": "Every monsoon, the same story",
+  "hero.credit": "Photo: {name}",
   "hero.watch": "Watch the live map",
   "nav.impact": "Impact",
   "impact.title": "Impact in numbers",

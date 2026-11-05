@@ -3,7 +3,7 @@
 import { gsap } from "gsap";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { absUrl, api, type PublicDetail, type Urgency } from "../api";
+import { absUrl, api, type Urgency } from "../api";
 import { ago, hazardLabel, inr, urgencyLabel } from "../format";
 import { useI18n } from "../i18n";
 import { usePortal } from "../portal";
@@ -13,9 +13,16 @@ const SCENE_S = 6.5;   // seconds per photo
 const FPS = 30;        // the reel is locked to a film-like 30 frames a second
 const rand = gsap.utils.random;
 
+interface Box { ymin: number; xmin: number; ymax: number; xmax: number }
+/** One shot of the reel: a photo, the damage box drawn on it, and the caption. Live reports and news photos share this shape. */
 interface Scene {
-  detail: PublicDetail;
+  key: string;
   img: HTMLImageElement;
+  box: Box | null;
+  boxClass: string;
+  chip: string;
+  title: string;
+  sub: string;
 }
 
 interface Layout { cw: number; ch: number; cols: number; rows: number; tw: number; th: number }
@@ -57,9 +64,9 @@ function buildScene(s: Scene, g: Layout): Live {
     }
   }
   // Blast centre: the damage if the AI boxed it, otherwise the middle of the picture.
-  const b = s.detail.result.bounding_box;
-  const boxed = s.detail.result.hazard_type !== "None" && b.xmax > b.xmin && b.ymax > b.ymin;
-  const origin = boxed
+  const b = s.box;
+  const boxed = !!b && b.xmax > b.xmin && b.ymax > b.ymin;
+  const origin = b && boxed
     ? { x: c.ox + ((b.xmin + b.xmax) / 2000) * c.dw, y: c.oy + ((b.ymin + b.ymax) / 2000) * c.dh }
     : { x: g.cw / 2, y: g.ch / 2 };
   return { wrap, tiles, origin };
@@ -89,21 +96,49 @@ export default function HeroReel() {
   const reduced = useMemo(() => (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false) && !/[?&]motion=on/.test(window.location.href), []);
   const words = t("home.title").split(" ");
 
-  // The worst open reports, with their AI result (for the damage box) and photo already loaded.
+  // The shots: real news photos of Indian potholes (public/banner, credited on screen) alternating with the worst live reports.
   useEffect(() => {
     let dead = false;
+    const load = (src: string) => new Promise<HTMLImageElement | null>((done) => {
+      const img = new Image();
+      img.onload = () => done(img);
+      img.onerror = () => done(null);
+      img.src = src;
+    });
     (async () => {
+      const news: Scene[] = [];
+      try {
+        const meta: { file: string; credit: string; boxes: Box[] }[] = await (await fetch(`${import.meta.env.BASE_URL}banner/meta.json`)).json();
+        const imgs = await Promise.all(meta.map((m) => load(`${import.meta.env.BASE_URL}banner/${m.file}`)));
+        meta.forEach((m, k) => {
+          const img = imgs[k];
+          if (img) news.push({ key: m.file, img, box: m.boxes[0] ?? null, boxClass: "u-CRITICAL", chip: tRef.current("hero.newsChip"),
+            title: tRef.current("hero.newsTitle"), sub: tRef.current("hero.credit", { name: m.credit }) });
+        });
+      } catch { /* no banner photos: the live reports still play */ }
+
+      const live: Scene[] = [];
       const page = await api.reports({ status: "open", sort: "urgency", per_page: 14 }).catch(() => null);
-      const items = (page?.items ?? []).filter((r) => r.photo_url).slice(0, 7);
+      const items = (page?.items ?? []).filter((r) => r.photo_url).slice(0, 6);
       const details = await Promise.all(items.map((r) => api.report(r.code).catch(() => null)));
-      const loaded = await Promise.all(details.map((d) => new Promise<Scene | null>((done) => {
-        if (!d) return done(null);
-        const img = new Image();
-        img.onload = () => done({ detail: d, img });
-        img.onerror = () => done(null);
-        img.src = absUrl(d.photo_url);
-      })));
-      if (!dead) setScenes(loaded.filter((s): s is Scene => s !== null));
+      const imgs = await Promise.all(details.map((d) => (d ? load(absUrl(d.photo_url)) : Promise.resolve(null))));
+      details.forEach((d, k) => {
+        const img = imgs[k];
+        if (!d || !img) return;
+        const b = d.result.bounding_box;
+        const tt = tRef.current;
+        live.push({
+          key: d.code, img, box: d.result.hazard_type !== "None" && b.xmax > b.xmin ? b : null, boxClass: `u-${d.urgency}`,
+          chip: `${hazardLabel(tt, d.hazard_type)} · AI ${d.severity.toFixed(1)} · ${urgencyLabel(tt, d.urgency as Urgency)}`,
+          title: `${hazardLabel(tt, d.hazard_type)}${d.ward?.name ? ` · ${d.ward.name}` : ""}`,
+          sub: `${ago(tt, d.created_at)}${d.repair_estimate?.total_inr ? ` · ${tt("list.cost", { amount: inr(d.repair_estimate.total_inr) })}` : ""}`,
+        });
+      });
+
+      // news, report, news, report ...
+      const mixed: Scene[] = [];
+      for (let k = 0; k < Math.max(news.length, live.length); k++) { if (news[k]) mixed.push(news[k]); if (live[k]) mixed.push(live[k]); }
+      if (!dead) setScenes(mixed);
     })();
     return () => { dead = true; };
   }, []);
@@ -191,19 +226,18 @@ export default function HeroReel() {
         // Slow push-in on the photo, like a camera move
         tl.fromTo(next.wrap, { scale: 1.02 }, { scale: 1.13, transformOrigin: `${next.origin.x}px ${next.origin.y}px`, duration: SCENE_S + 1, ease: "none" }, at);
 
-        // The AI finds the damage
-        const d = s.detail;
-        const b = d.result.bounding_box;
-        if (d.result.hazard_type !== "None" && b.xmax > b.xmin) {
+        // The damage is found and boxed
+        if (s.box && s.box.xmax > s.box.xmin) {
+          const b = s.box;
           const c = coverOf(s.img, g);
           const box = document.createElement("div");
-          box.className = `reel-box u-${d.urgency}`;
+          box.className = `reel-box ${s.boxClass}`;
           Object.assign(box.style, {
             left: `${c.ox + (b.xmin / 1000) * c.dw}px`, top: `${c.oy + (b.ymin / 1000) * c.dh}px`,
             width: `${((b.xmax - b.xmin) / 1000) * c.dw}px`, height: `${((b.ymax - b.ymin) / 1000) * c.dh}px`,
           });
           const chip = document.createElement("span");
-          chip.textContent = `${hazardLabel(tRef.current, d.hazard_type)} · AI ${d.severity.toFixed(1)} · ${urgencyLabel(tRef.current, d.urgency as Urgency)}`;
+          chip.textContent = s.chip;
           box.appendChild(chip);
           next.wrap.appendChild(box);
           tl.fromTo(box, { scale: 2.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.55, ease: "back.out(2.2)" }, at + 1.5);
@@ -212,12 +246,11 @@ export default function HeroReel() {
         }
 
         // Caption and progress
-        const place = d.ward?.name ? ` · ${d.ward.name}` : "";
         caption.innerHTML = "";
         const title = document.createElement("b");
-        title.textContent = `${hazardLabel(tRef.current, d.hazard_type)}${place}`;
+        title.textContent = s.title;
         const sub = document.createElement("span");
-        sub.textContent = `${ago(tRef.current, d.created_at)}${d.repair_estimate?.total_inr ? ` · ${tRef.current("list.cost", { amount: inr(d.repair_estimate.total_inr) })}` : ""}`;
+        sub.textContent = s.sub;
         caption.append(title, sub);
         tl.fromTo(caption, { y: 34, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, at + 0.9);
         const dots = Array.from(pipBar.children) as HTMLElement[];
@@ -287,7 +320,7 @@ export default function HeroReel() {
 
       <div className="reel-caption" ref={cap} aria-hidden="true" />
       <div className="reel-pips" ref={pips} aria-hidden="true">
-        {scenes.map((sc) => <span key={sc.detail.code}><i /></span>)}
+        {scenes.map((sc) => <span key={sc.key}><i /></span>)}
       </div>
     </section>
   );
