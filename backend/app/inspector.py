@@ -16,7 +16,7 @@ from typing import Callable, Protocol
 from pydantic import ValidationError
 
 from .pixels import analyze
-from .schema import Detection, Inspection, combine
+from .schema import MAX_DETECTIONS, Detection, Inspection, combine
 
 ASK = "Inspect this whole road photo and list every defect you can see. Return only the JSON object."
 FIX = "That answer did not match the schema. Reply with only one valid JSON object that matches it exactly."
@@ -302,15 +302,15 @@ class GuidedInspector:
 
     SPAN, OFFSET = 600, 400  # each region covers 60% of the width and height; the two start points are 0% and 40%
 
-    def __init__(self, base, tiles: bool = False, pixels: bool = True):
-        self.base, self.tiles, self.pixels = base, tiles, pixels
+    def __init__(self, base, tiles: bool = False, pixels: bool = True, add: bool = True):
+        self.base, self.tiles, self.pixels, self.add = base, tiles, pixels, add
         self.mode = base.mode
         self.model = getattr(base, "model", "")
         self.prompt = getattr(base, "prompt", "")
 
     def patient(self, timeout_s: float = 900):
         base = self.base.patient(timeout_s) if hasattr(self.base, "patient") else self.base
-        return GuidedInspector(base, self.tiles, self.pixels)
+        return GuidedInspector(base, self.tiles, self.pixels, self.add)
 
     @staticmethod
     def _defects(result: Inspection) -> list[Detection]:
@@ -367,6 +367,8 @@ class GuidedInspector:
             pm = analyze(jpeg)
             if pm is not None:
                 found = pm.check(found)
+                if self.add:
+                    found = found + pm.extras(found, MAX_DETECTIONS - len(found))
         return combine(found)
 
 
@@ -426,7 +428,7 @@ def build_inspector(settings, provider: str, model: str | None = None) -> Inspec
         return inspector
     tiles = (settings.scan_tiles or ("2" if provider == "azure" else "1")) == "2"
     pixels = settings.pixel_check != "0"
-    return GuidedInspector(inspector, tiles=tiles, pixels=pixels) if (tiles or pixels) else inspector
+    return GuidedInspector(inspector, tiles=tiles, pixels=pixels, add=settings.pixel_add != "0") if (tiles or pixels) else inspector
 
 
 def _build_one(settings, provider: str, model: str | None) -> Inspector:

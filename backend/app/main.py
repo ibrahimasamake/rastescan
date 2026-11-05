@@ -20,6 +20,10 @@ from .wards import load_wards
 
 log = logging.getLogger("rastescan")
 
+# Browsers on a private network: localhost, the usual home/office address ranges, and <name>.local.
+LAN_ORIGIN = (r"^https?://(localhost|127\.0\.0\.1|\[::1\]|[\w-]+\.local|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+"
+              r"|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$")
+
 
 def seed_admin(ctx: svc.Ctx) -> None:
     """Create the first administrator from ADMIN_EMAIL / ADMIN_PASSWORD when no officer exists yet."""
@@ -78,7 +82,11 @@ def create_app(settings: Settings | None = None, inspector: Inspector | None = N
 
     app = FastAPI(title="RasteScan API", description="Public road damage reports and the city's repair queue.", lifespan=lifespan)
     app.state.ctx = ctx
-    app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=["*"], allow_headers=["*"])
+    cors = {"allow_origins": ["*"] if "*" in settings.cors_origins else settings.cors_origins,
+            "allow_methods": ["*"], "allow_headers": ["*"], "expose_headers": ["ETag"]}
+    if settings.cors_allow_lan:
+        cors["allow_origin_regex"] = LAN_ORIGIN
+    app.add_middleware(CORSMiddleware, **cors)
     app.add_middleware(GZipMiddleware, minimum_size=1000)
 
     @app.middleware("http")

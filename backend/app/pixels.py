@@ -14,7 +14,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from .schema import BoundingBox, Detection
+from .schema import BoundingBox, Detection, _area, _iou, _overlap
 
 WORK_SIDE = 640  # analysis runs on a copy no larger than this, so it costs milliseconds
 
@@ -132,6 +132,32 @@ class PixelMap:
         for c in inside:
             share = (c.ymax - c.ymin) * (c.xmax - c.xmin) / max(1, biggest)
             out.append(d.model_copy(update={"bounding_box": c, "severity_score": max(1.0, round(d.severity_score * (0.7 + 0.3 * min(1.0, share)), 1))}))
+        return out
+
+    def extras(self, found: list[Detection], limit: int) -> list[Detection]:
+        """Strong damaged patches the AI did not box, added as unsure potholes so less damage goes unreported.
+
+        Only when the AI already confirmed road damage in this photo, and only patches that are not small and do not
+        overlap anything already boxed. They carry a low confidence (0.5) and say where they came from."""
+        if not found or limit <= 0:
+            return []
+        out: list[Detection] = []
+        for c in self.candidates(limit=24):
+            share = _area(c) / 1_000_000
+            if share < 0.002:
+                continue
+            taken = [d.bounding_box for d in found + out]
+            if any(_iou(c, t) > 0.15 or _overlap(c, t) / max(1, _area(c)) > 0.5 for t in taken):
+                continue
+            severity = round(min(8.0, 3.0 + 14 * share ** 0.5), 1)
+            out.append(Detection.model_validate({
+                "hazard_type": "Pothole", "confidence": 0.5, "severity_score": severity, "urgency_level": "LOW",
+                "repair_recommendation": "Found by pixel analysis, not confirmed by the AI. Patch with asphalt and compact if confirmed on site.",
+                "estimated_repair_time_hours": 1,
+                "estimated_dimensions": {"width_cm": 0, "depth_category": "Deep" if severity >= 8 else "Moderate" if severity >= 5 else "Shallow"},
+                "bounding_box": c.model_dump()}))
+            if len(out) >= limit:
+                break
         return out
 
     def check(self, found: list[Detection]) -> list[Detection]:

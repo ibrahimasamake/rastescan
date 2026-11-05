@@ -45,6 +45,8 @@ Deploy: `RASTESCAN_AI_MODE=azure AZURE_ENDPOINT=... AZURE_KEY=... AZURE_DEPLOYME
    because models place boxes far better on a small region and small far potholes only show up zoomed in.
 4. **The answer is checked against the pixels.** Boxes on cars, buildings or sky are dropped. A rough pothole box is replaced
    by the real damaged patches inside it (the model's label and severity are kept). Huge, tiny and repeated boxes are removed.
+5. **Missed damage is added.** If the AI confirmed damage but left strong damaged patches unboxed, those patches are added as
+   unsure potholes (confidence 0.5, marked as found by pixel analysis). `PIXEL_ADD=0` turns that off.
 It is approximate: a grey or white car on the road can look like road to the pixels. The model still decides what is a
 defect. Turn it off with `PIXEL_CHECK=0` and compare in the admin **AI models** page.
 

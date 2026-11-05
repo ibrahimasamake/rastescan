@@ -36,6 +36,8 @@ class Settings:
     scan_tiles: str = field(default_factory=lambda: _env("SCAN_TILES"))
     # "0" turns off the pixel analysis that hints the model and checks its boxes.
     pixel_check: str = field(default_factory=lambda: _env("PIXEL_CHECK", "1"))
+    # "0" stops pixel-only damaged patches from being added as unsure potholes when the AI missed them.
+    pixel_add: str = field(default_factory=lambda: _env("PIXEL_ADD", "1"))
     s3_bucket: str = field(default_factory=lambda: _env("S3_BUCKET"))
     data_dir: Path = field(default_factory=lambda: Path(_env("DATA_DIR", str(REPO_ROOT / "backend" / "data"))))
     web_dist: Path = field(default_factory=lambda: Path(_env("WEB_DIST", str(REPO_ROOT / "web" / "dist"))))
@@ -64,5 +66,8 @@ class Settings:
     reports_per_hour: int = field(default_factory=lambda: int(_env("REPORTS_PER_HOUR", "30")))
     logins_per_15min: int = field(default_factory=lambda: int(_env("LOGINS_PER_15MIN", "10")))
     merge_radius_m: float = field(default_factory=lambda: float(_env("MERGE_RADIUS_M", "15")))
+    # Allow pages served from this Mac's network address (192.168.x.x, 10.x.x.x, 172.16-31.x.x, *.local) to call the API directly.
+    # For development and demos on a private network only; leave it off in production.
+    cors_allow_lan: bool = field(default_factory=lambda: _env("CORS_ALLOW_LAN", "0") == "1")
     cors_origins: list[str] = field(default_factory=lambda: _list(
         "CORS_ORIGINS", "https://localhost,http://localhost,capacitor://localhost,http://localhost:5173"))

@@ -73,6 +73,7 @@ make seed-demo   # optional demo data on the server
 Details in [docs/aws-setup.md](docs/aws-setup.md). Android build and Play internal testing: [docs/android.md](docs/android.md).
 
 ## Guides
+- [Share the app with other devices and fix CORS](docs/sharing.md)
 - [Choose your AI provider](docs/ai-providers.md) and compare them with `make evaluate`
 - [Officer guide (1 page)](docs/officer-guide.md)
 - [Citizen FAQ](docs/citizen-faq.md)

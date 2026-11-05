@@ -101,3 +101,18 @@ def test_zoomed_regions_are_scanned_and_mapped_back_to_the_whole_photo():
     assert sorted(set(probe.sizes)) == [(600, 600), (1000, 1000)] and len(probe.sizes) == 5
     boxes = {(d.bounding_box.ymin, d.bounding_box.xmin) for d in out.detections}
     assert boxes == {(60, 60), (60, 460), (460, 60), (460, 460)}   # region origin 0 or 400 + 100 * 0.6
+
+
+def test_strong_patches_the_ai_missed_are_added_as_unsure_potholes():
+    img = np.full((300, 400, 3), 110, np.uint8)
+    img[:60] = (240, 235, 230)
+    cv2.ellipse(img, (230, 225), (30, 24), 0, 0, 360, (40, 40, 40), -1)   # hole the AI boxed
+    cv2.ellipse(img, (100, 258), (30, 20), 0, 0, 360, (40, 40, 40), -1)   # hole the AI missed
+    ok, buf = cv2.imencode(".jpg", img)
+    pm = analyze(buf.tobytes())
+    boxed = [det(HOLE)]
+    extra = pm.extras(boxed, 5)
+    assert len(extra) == 1 and extra[0].confidence == 0.5 and extra[0].hazard_type == "Pothole"
+    assert extra[0].bounding_box.xmax < 450                                  # the left-hand hole, not the boxed one
+    assert pm.extras([], 5) == []                                            # nothing is added if the AI found no damage
+    assert pm.extras(boxed, 0) == []
