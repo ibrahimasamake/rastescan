@@ -133,7 +133,10 @@ const RANK: Record<Urgency, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 
 function TourDriver({ stop, onUser }: { stop: Located | null; onUser: () => void }) {
   const map = useMap();
   useEffect(() => {
-    if (stop) map.flyTo([stop.lat, stop.lng], 17, { duration: 2.2 });
+    if (!stop) return;
+    const phone = window.innerWidth <= 900;
+    const pt = map.project([stop.lat, stop.lng], 17).add([0, phone ? map.getSize().y * 0.22 : 0]);
+    map.flyTo(map.unproject(pt, 17), 17, { duration: 2.2 });
   }, [stop?.code]); // eslint-disable-line react-hooks/exhaustive-deps
   useMapEvents({ dragstart: onUser, popupopen: onUser });
   return stop ? (
@@ -149,7 +152,10 @@ function TourCard({ r, i, n, playing, onPrev, onNext, onToggle }: {
   const { t } = useI18n();
   return (
     <aside className="tour-card" key={r.code} aria-live="polite">
-      <img src={absUrl(r.after_photo_url ?? r.photo_url)} alt={`${hazardLabel(t, r.hazard_type)} ${r.code}`} />
+      <div className="tour-img">
+        <img className="bg" src={absUrl(r.after_photo_url ?? r.photo_url)} alt="" aria-hidden="true" />
+        <img className="fg" src={absUrl(r.after_photo_url ?? r.photo_url)} alt={`${hazardLabel(t, r.hazard_type)} ${r.code}`} />
+      </div>
       <div className="tour-body">
         <div className="tour-badges"><UrgencyBadge urgency={r.urgency} /><StatusBadge status={r.public_status} /></div>
         <h3>{hazardLabel(t, r.hazard_type)} · {r.code}</h3>
