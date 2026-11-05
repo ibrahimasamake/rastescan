@@ -15,6 +15,7 @@ from typing import Callable, Protocol
 
 from pydantic import ValidationError
 
+from .pixels import analyze
 from .schema import Detection, Inspection, combine
 
 ASK = "Inspect this whole road photo and list every defect you can see. Return only the JSON object."
@@ -125,12 +126,14 @@ class BedrockInspector:
         )
         return "".join(block.get("text", "") for block in resp["output"]["message"]["content"])
 
-    def inspect(self, jpeg: bytes) -> Inspection:
+    accepts_hint = True
+
+    def inspect(self, jpeg: bytes, hint: str = "") -> Inspection:
         messages = [{
             "role": "user",
             "content": [
                 {"image": {"format": "jpeg", "source": {"bytes": jpeg}}},
-                {"text": ASK},
+                {"text": f"{ASK} {hint}".strip()},
             ],
         }]
         answer = self._ask(messages)
@@ -178,19 +181,21 @@ class _HttpInspector:
     def _post(self, messages: list) -> str:
         raise NotImplementedError
 
-    def _first(self, jpeg: bytes) -> list:
+    def _first(self, jpeg: bytes, hint: str = "") -> list:
         raise NotImplementedError
 
-    def inspect(self, jpeg: bytes) -> Inspection:
+    accepts_hint = True
+
+    def inspect(self, jpeg: bytes, hint: str = "") -> Inspection:
         import httpx
 
         try:
-            return self._inspect(jpeg)
+            return self._inspect(jpeg, hint)
         except httpx.TimeoutException as exc:
             raise InspectorBusy(f"the model did not answer within {self.timeout_s:.0f}s") from exc
 
-    def _inspect(self, jpeg: bytes) -> Inspection:
-        messages = self._first(jpeg)
+    def _inspect(self, jpeg: bytes, hint: str = "") -> Inspection:
+        messages = self._first(jpeg, hint)
         answer = with_backoff(lambda: self._post(messages), self._rate_limited, self.backoff_s)
         try:
             return parse_inspection(answer)
@@ -211,11 +216,11 @@ class GroqInspector(_HttpInspector):
         super().__init__(prompt, timeout_s=60)
         self.api_key, self.model = api_key, model
 
-    def _first(self, jpeg: bytes) -> list:
+    def _first(self, jpeg: bytes, hint: str = "") -> list:
         data_url = "data:image/jpeg;base64," + base64.b64encode(jpeg).decode()
         return [
             {"role": "system", "content": self.prompt},
-            {"role": "user", "content": [{"type": "text", "text": ASK}, {"type": "image_url", "image_url": {"url": data_url}}]},
+            {"role": "user", "content": [{"type": "text", "text": f"{ASK} {hint}".strip()}, {"type": "image_url", "image_url": {"url": data_url}}]},
         ]
 
     def _post(self, messages: list) -> str:
@@ -246,11 +251,11 @@ class AzureInspector(_HttpInspector):
         self.url = endpoint.rstrip("/") + "/chat/completions"
         self.api_key, self.model = api_key, deployment
 
-    def _first(self, jpeg: bytes) -> list:
+    def _first(self, jpeg: bytes, hint: str = "") -> list:
         data_url = "data:image/jpeg;base64," + base64.b64encode(jpeg).decode()
         return [
             {"role": "system", "content": self.prompt},
-            {"role": "user", "content": [{"type": "text", "text": ASK}, {"type": "image_url", "image_url": {"url": data_url}}]},
+            {"role": "user", "content": [{"type": "text", "text": f"{ASK} {hint}".strip()}, {"type": "image_url", "image_url": {"url": data_url}}]},
         ]
 
     # Parameters a model may refuse. gpt-5 and o-series reasoning models reject temperature; the gpt-4 family rejects
@@ -281,6 +286,88 @@ class AzureInspector(_HttpInspector):
                                f"resource and AZURE_ENDPOINT is its /openai/v1 address. Azure said: {resp.text[:200]}")
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"] or ""
+
+
+class GuidedInspector:
+    """Analyses the photo's pixels first, asks the model with that as a hint, then checks the answer against the pixels.
+
+    1. pixels.analyze finds the road surface and the patches on it that differ from the asphalt around them.
+    2. Those patches go to the model as hints, so it looks in the right places.
+    3. Every box the model returns is checked: boxes on cars, buildings or sky, or with nothing unusual inside, are dropped,
+       and the rest are snapped onto the damaged patch under them.
+    With tiles=True the model also sees four overlapping zoomed-in regions (60% of the photo each, in parallel), because a
+    model places boxes much better on a small region and small far potholes only show up zoomed in. Region results are
+    mapped back to the whole photo and merged. A failed region is skipped; a failed whole photo raises as usual.
+    """
+
+    SPAN, OFFSET = 600, 400  # each region covers 60% of the width and height; the two start points are 0% and 40%
+
+    def __init__(self, base, tiles: bool = False, pixels: bool = True):
+        self.base, self.tiles, self.pixels = base, tiles, pixels
+        self.mode = base.mode
+        self.model = getattr(base, "model", "")
+        self.prompt = getattr(base, "prompt", "")
+
+    def patient(self, timeout_s: float = 900):
+        base = self.base.patient(timeout_s) if hasattr(self.base, "patient") else self.base
+        return GuidedInspector(base, self.tiles, self.pixels)
+
+    @staticmethod
+    def _defects(result: Inspection) -> list[Detection]:
+        """The real defects in a result, whether or not it carries a full list."""
+        return result.detections or ([result] if result.hazard_type != "None" else [])
+
+    def _ask(self, jpeg: bytes) -> Inspection:
+        pm = analyze(jpeg) if self.pixels else None
+        if pm is not None and getattr(self.base, "accepts_hint", False):
+            return self.base.inspect(jpeg, hint=pm.hint())
+        return self.base.inspect(jpeg)
+
+    def _tile(self, jpeg: bytes, ox: int, oy: int) -> bytes:
+        import io
+
+        from PIL import Image
+
+        img = Image.open(io.BytesIO(jpeg)).convert("RGB")
+        w, h = img.size
+        crop = img.crop((round(w * ox / 1000), round(h * oy / 1000), round(w * (ox + self.SPAN) / 1000), round(h * (oy + self.SPAN) / 1000)))
+        out = io.BytesIO()
+        crop.save(out, "JPEG", quality=88)
+        return out.getvalue()
+
+    def _to_whole(self, d: Detection, ox: int, oy: int) -> Detection:
+        b = d.bounding_box
+        scale = self.SPAN / 1000
+        box = {"ymin": oy + round(b.ymin * scale), "xmin": ox + round(b.xmin * scale),
+               "ymax": oy + round(b.ymax * scale), "xmax": ox + round(b.xmax * scale)}
+        return d.model_copy(update={"bounding_box": type(b)(**{k: min(1000, max(0, v)) for k, v in box.items()})})
+
+    def inspect(self, jpeg: bytes) -> Inspection:
+        import logging
+        from concurrent.futures import ThreadPoolExecutor
+
+        if not self.tiles:
+            whole = self._ask(jpeg)
+            found = self._defects(whole)
+        else:
+            origins = [(ox, oy) for oy in (0, self.OFFSET) for ox in (0, self.OFFSET)]
+            with ThreadPoolExecutor(max_workers=5) as pool:
+                whole_f = pool.submit(self._ask, jpeg)
+                tile_f = [(o, pool.submit(lambda o=o: self._ask(self._tile(jpeg, *o)))) for o in origins]
+                whole = whole_f.result()
+                found = self._defects(whole)
+                for (ox, oy), fut in tile_f:
+                    try:
+                        found += [self._to_whole(d, ox, oy) for d in self._defects(fut.result())]
+                    except Exception as exc:  # noqa: BLE001 - a missed region only costs some recall
+                        logging.getLogger("rastescan").warning("region scan skipped: %s", exc)
+        if not found:
+            return whole
+        if self.pixels:
+            pm = analyze(jpeg)
+            if pm is not None:
+                found = pm.check(found)
+        return combine(found)
 
 
 _FAKE_RESULTS = [
@@ -329,7 +416,20 @@ class FakeInspector:
 
 
 def build_inspector(settings, provider: str, model: str | None = None) -> Inspector:
-    """One inspector for a provider and (optionally) a specific model; used at start-up and by the admin Model lab."""
+    """One inspector for a provider and (optionally) a specific model; used at start-up and by the admin Model lab.
+
+    Every real provider is wrapped in GuidedInspector: pixel analysis before and after the model (PIXEL_CHECK=0 turns it
+    off), plus a zoomed-region scan (SCAN_TILES=2; on by default for Azure, off elsewhere to spare free-tier limits).
+    """
+    inspector = _build_one(settings, provider, model)
+    if provider == "fake":
+        return inspector
+    tiles = (settings.scan_tiles or ("2" if provider == "azure" else "1")) == "2"
+    pixels = settings.pixel_check != "0"
+    return GuidedInspector(inspector, tiles=tiles, pixels=pixels) if (tiles or pixels) else inspector
+
+
+def _build_one(settings, provider: str, model: str | None) -> Inspector:
     if provider == "fake":
         return FakeInspector()
     prompt = load_prompt(settings.prompt_file)

@@ -36,6 +36,18 @@ AI_MODE=azure make api
 ```
 Deploy: `RASTESCAN_AI_MODE=azure AZURE_ENDPOINT=... AZURE_KEY=... AZURE_DEPLOYMENT=... make deploy`.
 
+## How a photo is analysed (all real providers)
+1. **Pixels first.** `backend/app/pixels.py` finds the road surface and the patches on it that differ from the asphalt around
+   them (dark pits, light water-filled holes). Plain computer vision: no model, no network, a few milliseconds.
+2. **The model gets those patches as hints**, so it looks in the right places, and a strict prompt that says: road surface
+   only, never vehicles or buildings, tight non-overlapping boxes, near road first.
+3. **Optional zoomed regions** (`SCAN_TILES=2`, on by default for Azure): the model also sees four overlapping zoomed views,
+   because models place boxes far better on a small region and small far potholes only show up zoomed in.
+4. **The answer is checked against the pixels.** Boxes on cars, buildings or sky are dropped. A rough pothole box is replaced
+   by the real damaged patches inside it (the model's label and severity are kept). Huge, tiny and repeated boxes are removed.
+It is approximate: a grey or white car on the road can look like road to the pixels. The model still decides what is a
+defect. Turn it off with `PIXEL_CHECK=0` and compare in the admin **AI models** page.
+
 ## Rate limits and failures
 - The same photo is never inspected twice: results are cached by image hash.
 - On HTTP 429 (or Bedrock throttling) the server waits two seconds and retries once.

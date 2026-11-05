@@ -31,6 +31,11 @@ class Settings:
     azure_endpoint: str = field(default_factory=lambda: _env("AZURE_ENDPOINT"))
     azure_key: str = field(default_factory=lambda: _env("AZURE_KEY"))
     azure_deployment: str = field(default_factory=lambda: _env("AZURE_DEPLOYMENT"))
+    # "2" = also scan four zoomed regions of each photo (better boxes, 5 model calls per photo); "1" = whole photo only.
+    # Empty means the provider default (on for Azure).
+    scan_tiles: str = field(default_factory=lambda: _env("SCAN_TILES"))
+    # "0" turns off the pixel analysis that hints the model and checks its boxes.
+    pixel_check: str = field(default_factory=lambda: _env("PIXEL_CHECK", "1"))
     s3_bucket: str = field(default_factory=lambda: _env("S3_BUCKET"))
     data_dir: Path = field(default_factory=lambda: Path(_env("DATA_DIR", str(REPO_ROOT / "backend" / "data"))))
     web_dist: Path = field(default_factory=lambda: Path(_env("WEB_DIST", str(REPO_ROOT / "web" / "dist"))))

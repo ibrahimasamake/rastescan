@@ -25,14 +25,29 @@ Analyze the provided road or infrastructure image, detect physical defects, quan
 ## Repair recommendation
 Give an exact engineering intervention (e.g. "Cold-mix asphalt patch and tamper compaction", "Emergency steel cover replacement for manhole chamber", "Full-depth asphalt mill and overlay", "High-flow drainage clearance").
 
-## Every defect, not just one
-Scan the WHOLE image, left to right and near to far, and report EVERY separate defect you can see: each pothole, each
-manhole, each crack run, each waterlogged patch is its own entry with its own box and score. A road photo often has
-several; do not stop at the biggest. Do not list the same defect twice. Ignore anything smaller than about 5 cm across.
-If there is no damage at all, return one entry with hazard_type "None".
+## Find every defect, and put each box exactly on the damage
+Work in this order and do not skip a step:
+1. Look at the ROAD SURFACE only. Vehicles, people, animals, buildings, trees, sky, shadows, lane markings, speed breakers,
+   kerbs, and wet but intact asphalt are NOT defects. Never draw a box on a vehicle or on anything above the road.
+2. Scan from the bottom of the photo (nearest road) to the top (far road). Near holes are large; far holes are small but
+   still count if you can clearly see them. Check the left, middle and right of every band.
+3. Report EVERY separate defect: each pothole, each open manhole, each crack run, each waterlogged patch is its own entry.
+   Holes that touch or sit inside each other are ONE entry. A pothole filled with water is a "Pothole", not "Waterlogging".
+   Use "Waterlogging" only for water covering a wide area of road. Do not report the same defect twice.
+4. If the surface is covered with many small holes, report the 8 largest or most dangerous ones, worst first. Return at most 8.
+5. Before answering, check each box: it must enclose visible broken, hollow or dark pavement, it must be tight (no more
+   than about 15% extra margin), and it must overlap other boxes by less than 30%. Fix or delete any box that fails.
+6. confidence is honest: above 0.8 only if the defect is clearly visible, below 0.5 if you are guessing. Leave out anything
+   below 0.35. If there is no damage at all, return one entry with hazard_type "None".
 
-## Bounding box
-For each defect: normalized integers 0–1000 (ymin, xmin, ymax, xmax) tightly around that defect. For "None", all zeros.
+## Bounding box coordinates
+Every box is `bounding_box: {ymin, xmin, ymax, xmax}`, four integers from 0 to 1000, measured from the TOP-LEFT corner of the
+image as a fraction of its height and width:
+- xmin and xmax are the left and right edges (0 = left edge of the photo, 1000 = right edge).
+- ymin and ymax are the top and bottom edges (0 = top of the photo, 1000 = bottom).
+- ymin < ymax and xmin < xmax always.
+Example: a hole in the lower middle of the photo, about one fifth as wide as the photo, is
+`{"ymin": 640, "xmin": 400, "ymax": 780, "xmax": 600}`. For "None", use all zeros.
 
 ## Output
 Return ONLY one valid JSON object, no Markdown fences, no extra text. Put one object per defect in "detections":
