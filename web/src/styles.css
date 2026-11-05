@@ -336,17 +336,18 @@ dialog.modal::backdrop { background: rgba(11, 37, 69, 0.6); }
 .map-box.full .map-full-bar { bottom: max(18px, env(safe-area-inset-bottom)); }
 
 /* Auto-playing map tour: a card beside the active pin (photo in a 4:5 frame), and a pulsing ring on the pin */
-.tour-card { position: absolute; z-index: 1100; right: calc(50% + 46px); top: 50%; transform: translateY(-50%); width: min(470px, calc(50% - 60px));
+.tour-card { position: absolute; z-index: 1100; right: calc(50% + 46px); top: 50%; transform: translateY(-50%); width: min(620px, calc(50% - 56px)); font-size: 1.08rem;
   display: flex; background: var(--surface); border-radius: var(--radius); box-shadow: 0 8px 28px rgba(0,0,0,.4); animation: tour-in .6s ease both; }
 .tour-card::after { content: ""; position: absolute; right: -8px; top: 50%; width: 16px; height: 16px; background: var(--surface); transform: translateY(-50%) rotate(45deg); border-radius: 2px; }
-.tour-img { position: relative; flex: none; width: 42%; aspect-ratio: 4 / 5; overflow: hidden; background: var(--navy); border-radius: var(--radius) 0 0 var(--radius); }
+.tour-img { position: relative; flex: none; width: 46%; aspect-ratio: 4 / 5; overflow: hidden; background: var(--navy); border-radius: var(--radius) 0 0 var(--radius); }
 .tour-img img { position: absolute; inset: 0; width: 100%; height: 100%; }
 .tour-img .bg { object-fit: cover; filter: blur(14px) brightness(.7); transform: scale(1.2); }
 .tour-img .fg { object-fit: cover; object-position: 50% 62%; }  /* road damage sits low in most photos */
-.tour-body { padding: 12px 14px 16px; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 0; }
-.tour-body h3 { margin: 0; }
+.tour-body { padding: 18px 20px 22px; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 0; }
+.tour-body h3 { margin: 0; font-size: 1.5rem; }
+.tour-body .small { font-size: 1rem; }
 .tour-badges { display: flex; flex-wrap: wrap; gap: 6px; }
-.tour-rec { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
+.tour-rec { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
 .tour-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .tour-progress { position: absolute; left: 0; bottom: 0; height: 4px; width: 100%; background: var(--saffron); transform-origin: left; transform: scaleX(0); display: block; border-radius: 0 0 var(--radius) var(--radius); }
 .tour-progress.run { animation-name: tour-fill; animation-timing-function: linear; animation-fill-mode: forwards; }
@@ -355,11 +356,14 @@ dialog.modal::backdrop { background: rgba(11, 37, 69, 0.6); }
 @keyframes tour-in { from { opacity: 0; transform: translate(-16px, -50%); } to { opacity: 1; transform: translateY(-50%); } }
 @keyframes tour-fill { to { transform: scaleX(1); } }
 @keyframes tour-ring { from { transform: scale(.25); opacity: .95; } to { transform: scale(1); opacity: 0; } }
+@media (min-width: 1101px) { .tour-card { right: calc(40% + 46px); width: min(760px, calc(60% - 70px)); } .tour-body h3 { font-size: 1.7rem; } }
 /* Phones and narrow windows: the card docks at the bottom and the map keeps the pin above it */
 @media (max-width: 900px) {
   .tour-card { right: 8px; left: 8px; top: auto; bottom: 66px; width: auto; transform: none; animation-name: tour-in-up; }
   .tour-card::after { display: none; }
-  .tour-img { width: 34%; max-width: 150px; }
+  .tour-img { width: 40%; max-width: 190px; }
+  .tour-body { padding: 12px 14px 16px; }
+  .tour-body h3 { font-size: 1.2rem; }
   .tour-rec { -webkit-line-clamp: 2; }
 }
 @keyframes tour-in-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }

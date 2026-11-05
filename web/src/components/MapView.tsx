@@ -134,8 +134,10 @@ function TourDriver({ stop, onUser }: { stop: Located | null; onUser: () => void
   const map = useMap();
   useEffect(() => {
     if (!stop) return;
+    const size = map.getSize();
     const phone = window.innerWidth <= 900;
-    const pt = map.project([stop.lat, stop.lng], 17).add([0, phone ? map.getSize().y * 0.22 : 0]);
+    const wide = window.innerWidth > 1100;  // the pin sits ~60% across so the big card has room on its left
+    const pt = map.project([stop.lat, stop.lng], 17).add([wide ? -size.x * 0.1 : 0, phone ? size.y * 0.22 : 0]);
     map.flyTo(map.unproject(pt, 17), 17, { duration: 2.2 });
   }, [stop?.code]); // eslint-disable-line react-hooks/exhaustive-deps
   useMapEvents({ dragstart: onUser, popupopen: onUser });
