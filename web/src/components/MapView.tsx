@@ -168,6 +168,45 @@ function TourCard({ r, i, n, playing, onPrev, onNext, onToggle }: {
   );
 }
 
+/** A list laid over the map: every report with its key facts. Clicking one flies the map there and opens its card. */
+function ReportList({ items, activeCode, open, onToggle, onPick }: {
+  items: Located[]; activeCode: string | null; open: boolean; onToggle: () => void; onPick: (r: Located) => void;
+}) {
+  const { t } = useI18n();
+  const box = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    const el = box.current?.querySelector<HTMLElement>("[aria-current=true]");
+    const c = box.current;
+    if (!el || !c) return;
+    if (el.offsetTop < c.scrollTop || el.offsetTop + el.offsetHeight > c.scrollTop + c.clientHeight) {
+      c.scrollTo({ top: el.offsetTop - c.clientHeight / 2 + el.offsetHeight / 2, behavior: "smooth" });
+    }
+  }, [activeCode, open]);
+  return (
+    <section className={`map-list ${open ? "open" : ""}`} aria-label={t("list.mapTitle")}>
+      <button type="button" className="map-list-head" onClick={onToggle} aria-expanded={open}>
+        <b>{t("list.mapTitle")} ({items.length})</b><span aria-hidden="true">{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <ul ref={box}>
+          {items.map((r) => (
+            <li key={r.code}>
+              <button type="button" onClick={() => onPick(r)} aria-current={r.code === activeCode}>
+                <span className="dotl" style={{ background: pinColour(r) }} aria-hidden="true" />
+                <span className="mi-main">
+                  <b>{hazardLabel(t, r.hazard_type)} · {r.code}</b>
+                  <span className="small muted">{r.ward?.name ? `${r.ward.name} · ` : ""}{urgencyLabel(t, r.urgency)} · {statusLabel(t, r.public_status)} · {ago(t, r.created_at)}</span>
+                </span>
+                <img src={absUrl(r.after_photo_url ?? r.photo_url)} alt="" loading="lazy" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 const LAYER_KEY = "rastescan.mapLayer";
 
 function savedLayer(): string {
@@ -212,14 +251,16 @@ export default function MapView({ reports, short = false, fit = true, pick, pick
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
   const stopsKey = useRef("");
-  const stops = useMemo(() => {
+  const ordered = useMemo(() => {
     if (!tour) return [] as Located[];
     return reports
       .filter((r): r is Located => r.lat !== null && r.lng !== null)
       .sort((a, b) => (a.public_status === "resolved" ? 1 : 0) - (b.public_status === "resolved" ? 1 : 0)
-        || RANK[a.urgency] - RANK[b.urgency] || b.created_at.localeCompare(a.created_at))
-      .slice(0, 30);
+        || RANK[a.urgency] - RANK[b.urgency] || b.created_at.localeCompare(a.created_at));
   }, [reports, tour]);
+  const stops = useMemo(() => ordered.slice(0, 30), [ordered]);
+  const [focus, setFocus] = useState<Located | null>(null);
+  const [listOpen, setListOpen] = useState(() => window.innerWidth > 700);
   const key = stops.map((r) => r.code).join("|");
   useEffect(() => {
     if (stopsKey.current !== key) {
@@ -232,7 +273,12 @@ export default function MapView({ reports, short = false, fit = true, pick, pick
     const id = setTimeout(() => setIdx((i) => (i + 1) % stops.length), TOUR_MS);
     return () => clearTimeout(id);
   }, [playing, idx, stops.length]);
-  const stop = stops.length ? stops[Math.min(idx, stops.length - 1)] : null;
+  const stop = focus ?? (stops.length ? stops[Math.min(idx, stops.length - 1)] : null);
+  const focusIdx = focus ? stops.findIndex((r) => r.code === focus.code) : -1;
+  const at = focus ? Math.max(focusIdx, 0) : Math.min(idx, Math.max(stops.length - 1, 0));
+  /** Leave a hand-picked report and carry on the tour from the nearest tour stop. */
+  const move = (to: number) => { setFocus(null); setIdx(((to % stops.length) + stops.length) % stops.length); };
+  const choose = (r: Located) => { setPlaying(false); setFocus(r); };
   // Full screen is a fixed overlay (works on phones too). Escape leaves it, and the page behind stops scrolling.
   useEffect(() => {
     if (!full) return;
@@ -267,10 +313,13 @@ export default function MapView({ reports, short = false, fit = true, pick, pick
         {picked && <CircleMarker center={picked} radius={11} pathOptions={{ color: "#0b2545", weight: 4, fillColor: "#f29a2e", fillOpacity: 1 }} />}
       </MapContainer>
       {tour && stop && (
-        <TourCard r={stop} i={Math.min(idx, stops.length - 1)} n={stops.length} playing={playing}
-          onPrev={() => { setPlaying(false); setIdx((i) => (i - 1 + stops.length) % stops.length); }}
-          onNext={() => { setPlaying(false); setIdx((i) => (i + 1) % stops.length); }}
-          onToggle={() => setPlaying(!playing)} />
+        <TourCard r={stop} i={at} n={stops.length} playing={playing}
+          onPrev={() => { setPlaying(false); move(at - 1); }}
+          onNext={() => { setPlaying(false); move(at + 1); }}
+          onToggle={() => { if (!playing) move(at); setPlaying(!playing); }} />
+      )}
+      {tour && ordered.length > 0 && (
+        <ReportList items={ordered} activeCode={stop?.code ?? null} open={listOpen} onToggle={() => setListOpen(!listOpen)} onPick={choose} />
       )}
       <div className="map-full-bar">
         <button type="button" className="btn accent" onClick={() => setFull(!full)} aria-pressed={full}>

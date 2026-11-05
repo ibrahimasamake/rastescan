@@ -236,6 +236,7 @@ export const en = {
   "map.loading": "Loading the map…",
   "map.cluster": "{n} reports here. Zoom in to see them.",
   "map.legend": "Legend",
+  "list.mapTitle": "Reports on the map",
   "tour.pause": "Pause",
   "tour.play": "Play",
   "tour.prev": "Previous report",
