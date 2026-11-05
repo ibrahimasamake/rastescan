@@ -50,6 +50,7 @@ export interface PublicReport {
   after_photo_url: string | null;
   repair_recommendation: string | null;
   estimated_repair_time_hours: number | null;
+  repair_cost_inr: number;
   reported_count: number;
   assignee: string | null;
   created_at: string;

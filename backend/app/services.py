@@ -170,6 +170,7 @@ def public_item(ctx: Ctx, row: dict) -> dict:
         "after_photo_url": photo_url(ctx, row.get("after_photo_key")),
         "repair_recommendation": result.get("repair_recommendation"),
         "estimated_repair_time_hours": result.get("estimated_repair_time_hours"),
+        "repair_cost_inr": costing.estimate(Inspection.model_validate(result))["total_inr"],
         "reported_count": reported_count(row),
         "assignee": row.get("assignee"),
         "created_at": row["created_at"],

@@ -1,24 +1,72 @@
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../api";
+import { absUrl, api, type PublicReport } from "../api";
 import { DemoBadge, StatusBadge, UrgencyBadge } from "../components/Badges";
 import { Filters, useFilters } from "../components/Filters";
 import { Icon } from "../components/Icons";
 import { PageHead } from "../components/Layout";
+import { SeverityMeter } from "../components/Report";
 import { Empty, ErrorBox, Skeleton, useAsync } from "../components/States";
-import { CLOSED, ago, hazardLabel, sla } from "../format";
+import { CLOSED, ago, hazardLabel, inr, sla } from "../format";
 import { useI18n } from "../i18n";
 import type { Key } from "../i18n/en";
 
 const SORTS = ["newest", "oldest", "urgency", "severity", "due", "reports"] as const;
-const PER_PAGE = 25;
+const PER_PAGE = 24;
+
+/** One report as a photo card: the picture, what the AI found, how bad, when it is due, and what it should cost. */
+function Tile({ r, fresh }: { r: PublicReport; fresh: boolean }) {
+  const { t, num } = useI18n();
+  const clock = sla(t, r.due_at, CLOSED.has(r.status));
+  return (
+    <Link to={`/r/${r.code}`} className={`card tile ${r.overdue ? "overdue" : ""} ${fresh ? "fresh" : ""}`}>
+      <div className="tile-img">
+        <img src={absUrl(r.photo_url)} alt="" loading="lazy" decoding="async" />
+        <span className="tile-tl"><UrgencyBadge urgency={r.urgency} />{fresh && <span className="badge tile-new">{t("list.new")}</span>}</span>
+        <span className="tile-tr" title={t("list.ai")}>AI {num(r.severity, 1)}</span>
+        {r.after_photo_url && (
+          <span className="tile-after"><img src={absUrl(r.after_photo_url)} alt="" loading="lazy" /><i>{t("list.repaired")}</i></span>
+        )}
+      </div>
+      <div className="body">
+        <div className="row"><b>{hazardLabel(t, r.hazard_type)}</b><StatusBadge status={r.public_status} /></div>
+        <div className="row small muted"><span><Icon name="pin" size={13} /> {r.ward?.name ? `${r.ward.name} · ${r.code}` : r.code}</span><span>{ago(t, r.created_at)}</span></div>
+        {r.repair_recommendation && <p className="small tile-rec" lang="en">{r.repair_recommendation}</p>}
+        <SeverityMeter score={r.severity} urgency={r.urgency} />
+        <div className="row small">
+          <span className={clock?.overdue ? "overdue-text" : "muted"}><Icon name="clock" size={13} /> {clock?.text ?? "–"}</span>
+          {r.repair_cost_inr > 0 && <b>{t("list.cost", { amount: inr(r.repair_cost_inr) })}</b>}
+        </div>
+        <div className="row small muted"><span>{t("tour.people", { n: r.reported_count })}</span>{r.is_demo && <DemoBadge />}</div>
+      </div>
+    </Link>
+  );
+}
 
 export default function ListPage() {
-  const { t, num, date } = useI18n();
+  const { t, num } = useI18n();
   const f = useFilters();
   const sort = f.params.get("sort") ?? "newest";
   const page = Math.max(1, Number(f.params.get("page") ?? 1));
   const key = JSON.stringify([f.apiParams, sort, page]);
-  const { data, error, loading, reload } = useAsync(() => api.reports({ ...f.apiParams, sort, page, per_page: PER_PAGE }), [key], 60000);
+  const { data, error, loading, reload } = useAsync(() => api.reports({ ...f.apiParams, sort, page, per_page: PER_PAGE }), [key], 15000);
+  // Cards that arrive after the first load (a citizen just reported them) are marked "New" until the filters change.
+  const seen = useRef<{ key: string; codes: Set<string> } | null>(null);
+  const [fresh, setFresh] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!data) return;
+    const codes = data.items.map((r) => r.code);
+    if (!seen.current || seen.current.key !== key) {
+      seen.current = { key, codes: new Set(codes) };
+      setFresh(new Set());
+      return;
+    }
+    const added = codes.filter((c) => !seen.current!.codes.has(c));
+    if (added.length) {
+      added.forEach((c) => seen.current!.codes.add(c));
+      setFresh((f) => new Set([...f, ...added]));
+    }
+  }, [data, key]);
   const pages = data ? Math.max(1, Math.ceil(data.total / PER_PAGE)) : 1;
 
   return (
@@ -37,45 +85,14 @@ export default function ListPage() {
           <a className="btn small" href={api.exportUrl({ ...f.apiParams, sort })} download><Icon name="down" /> {t("list.csv")}</a>
         </div>
       </div>
-      <p className="muted" aria-live="polite">{data ? t("list.count", { n: num(data.total) }) : t("common.loading")}</p>
+      <p className="muted" aria-live="polite">{data ? t("list.count", { n: num(data.total) }) : t("common.loading")} <span className="live-tag"><i aria-hidden="true" />{t("list.live")}</span></p>
       {loading && !data && <Skeleton h={300} />}
       {!!error && !data && <ErrorBox error={error} retry={reload} />}
       {data && data.items.length === 0 && <Empty>{t("list.empty")}</Empty>}
       {data && data.items.length > 0 && (
-        <div className="table-wrap">
-          <table>
-            <caption className="sr-only">{t("list.title")}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{t("list.code")}</th>
-                <th scope="col">{t("filter.hazard")}</th>
-                <th scope="col">{t("filter.urgency")}</th>
-                <th scope="col">{t("list.status")}</th>
-                <th scope="col">{t("filter.ward")}</th>
-                <th scope="col">{t("list.reported")}</th>
-                <th scope="col">{t("report.deadline")}</th>
-                <th scope="col" className="num">{t("report.citizens")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((r) => {
-                const clock = sla(t, r.due_at, CLOSED.has(r.status));
-                return (
-                  <tr key={r.code} className={r.overdue ? "overdue" : ""}>
-                    <td><Link to={`/r/${r.code}`}>{r.code}</Link> {r.is_demo && <DemoBadge />}</td>
-                    <td>{hazardLabel(t, r.hazard_type)}</td>
-                    <td><UrgencyBadge urgency={r.urgency} /></td>
-                    <td><StatusBadge status={r.public_status} /></td>
-                    <td>{r.ward?.name ?? "–"}</td>
-                    <td title={date(r.created_at, true)}>{ago(t, r.created_at)}</td>
-                    <td className={clock?.overdue ? "overdue-text" : ""}>{clock?.text ?? "–"}</td>
-                    <td className="num">{num(r.reported_count)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <ul className="tiles" aria-label={t("list.title")}>
+          {data.items.map((r) => <li key={r.code}><Tile r={r} fresh={fresh.has(r.code)} /></li>)}
+        </ul>
       )}
       {data && pages > 1 && (
         <nav className="pager" aria-label={t("common.page", { page, pages })}>
