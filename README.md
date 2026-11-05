@@ -15,7 +15,7 @@ Built for the TechKubik National Level Project Expo 2026 (HKBK College of Engine
 - **Government dashboard** (officer login): queue ordered by urgency and deadline, assign crews, official public
   updates, repair photo re-inspection by the AI, review queue for unsure results, merge duplicates, crew work orders,
   analytics, officer accounts, audit trail of every change.
-- **AI providers**: Amazon Nova on Bedrock, Groq (free key), Ollama (local, free), a YOLO road-damage detector, or a fake test mode. Admins can compare them on one photo in the **AI models** page.
+- **AI providers**: Amazon Nova on Bedrock, Groq (free key), or a fake test mode. Admins can compare them on one photo in the **AI models** page.
   The model only suggests; the server applies fixed urgency rules.
 - **Android app** (Capacitor) and **AWS deploy** with Terraform + Ansible.
 
@@ -32,7 +32,7 @@ flowchart LR
     DB[(SQLite<br/>reports, history,<br/>officers, wards)]
   end
   S3[(S3<br/>blurred photos)]
-  AI{{AI provider<br/>Bedrock Nova / Groq / Ollama}}
+  AI{{AI provider<br/>Bedrock Nova / Groq}}
   W --> CF --> API
   A --> CF
   API --> DB
@@ -55,7 +55,7 @@ make web            # terminal 2: portal on http://localhost:5173
 - Public portal: http://localhost:5173/#/
 - Officer dashboard: http://localhost:5173/#/officer, choose "Use the expo PIN instead", PIN `1234`
 - Real officer accounts: start the API with `ADMIN_EMAIL=you@example.org ADMIN_PASSWORD=at-least-10-chars make api`
-- Real AI: `AI_MODE=groq GROQ_API_KEY=... make api` or `AI_MODE=ollama make api`. See [docs/ai-providers.md](docs/ai-providers.md).
+- Real AI: `AI_MODE=groq GROQ_API_KEY=... make api` . See [docs/ai-providers.md](docs/ai-providers.md).
 - Take demo data out again: `make unseed-demo`
 
 Checks (the same ones CI runs):
@@ -74,7 +74,6 @@ Details in [docs/aws-setup.md](docs/aws-setup.md). Android build and Play intern
 
 ## Guides
 - [Choose your AI provider](docs/ai-providers.md) and compare them with `make evaluate`
-- [YOLO road-damage detector](docs/yolo.md): free, fast boxes for potholes and cracks, no rate limits
 - [Officer guide (1 page)](docs/officer-guide.md)
 - [Citizen FAQ](docs/citizen-faq.md)
 - [Original project design](docs/design.html)

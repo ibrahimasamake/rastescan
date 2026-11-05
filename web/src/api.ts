@@ -290,22 +290,16 @@ export interface Analytics {
 
 export interface ModelInfo {
   id: string;
-  provider: "ollama" | "groq" | "bedrock" | "fake" | "yolo";
+  provider: "groq" | "bedrock" | "fake";
   model: string;
   label: string;
-  installed: boolean;
   runnable: boolean;
-  size_gb: number | null;
   note: string;
-  pull: string | null;
-  pull_state: { running: boolean; percent: number; status: string; error: string | null } | null;
   live: boolean;
 }
 
 export interface ModelList {
   live: { provider: string; model: string };
-  ollama_running: boolean;
-  ollama_url: string;
   models: ModelInfo[];
 }
 
@@ -374,7 +368,6 @@ export const officerApi = {
     form.append("model", model);
     return call<ModelTest>("/api/v2/admin/models/test", { method: "POST", body: form, headers: authHeaders() });
   },
-  pullModel: (model: string) => call<unknown>("/api/v2/admin/models/pull", json("POST", { model })),
   setLiveModel: (provider: string, model: string) =>
     call<{ live: { provider: string; model: string } }>("/api/v2/admin/models/live", json("POST", { provider, model })),
   adminExportUrl: () => API_BASE + "/api/v2/admin/export.csv",

@@ -5,10 +5,10 @@ Put photos in test-photos/ and a test-photos/labels.csv with columns:
 (severity is optional; hazard_type uses the schema names, e.g. Pothole, Open Manhole, None).
 
 Run from the repo root:
-    backend/.venv/bin/python scripts/evaluate.py --providers groq,ollama
-    backend/.venv/bin/python scripts/evaluate.py --providers bedrock,groq,ollama,fake
+    backend/.venv/bin/python scripts/evaluate.py --providers groq
+    backend/.venv/bin/python scripts/evaluate.py --providers bedrock,groq,fake
 
-Each provider reads its usual settings from the environment (GROQ_API_KEY, OLLAMA_URL, AWS_REGION,
+Each provider reads its usual settings from the environment (GROQ_API_KEY, AWS_REGION,
 BEDROCK_MODEL_ID, ...). Results for every photo go to test-photos/results-<provider>.csv and one summary table
 is printed: hazard accuracy, urgency accuracy, mean absolute severity error, JSON failure rate, busy (rate-limited)
 rate and median latency.
@@ -103,7 +103,7 @@ def print_table(rows: list[dict]) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--providers", default="bedrock", help="comma separated: bedrock, groq, ollama, fake")
+    ap.add_argument("--providers", default="bedrock", help="comma separated: bedrock, groq, fake")
     ap.add_argument("--photos", default=str(ROOT / "test-photos"))
     ap.add_argument("--pause", type=float, default=0.0, help="seconds between calls (e.g. 2 for Groq's free tier)")
     args = ap.parse_args()

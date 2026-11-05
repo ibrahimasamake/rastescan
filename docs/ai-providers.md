@@ -8,7 +8,6 @@ Pick the provider with `AI_MODE`.
 |---|---|---|---|
 | `bedrock` | Pay per call (cents per photo with Nova Lite/Pro) | AWS account with Bedrock access; the EC2 role does auth | Production on AWS |
 | `groq` | Free tier with rate limits | `GROQ_API_KEY` from console.groq.com | Demos, the expo, low volume |
-| `ollama` | Free | A laptop or server running Ollama with a vision model | Fully offline demos, privacy |
 | `fake` | Free | Nothing | UI work and tests only; the portal shows a "Test mode" banner |
 
 ## Bedrock (Amazon Nova)
@@ -25,14 +24,6 @@ AI_MODE=groq make api
 ```
 Default model `qwen/qwen3.8-27b`. If Groq has retired it, pick a current vision model on
 console.groq.com and set `GROQ_MODEL=...`. Deploy: `RASTESCAN_AI_MODE=groq GROQ_API_KEY=gsk_... make deploy`.
-
-## Ollama (local, free)
-```bash
-ollama pull qwen2.5vl:7b
-AI_MODE=ollama make api                 # OLLAMA_URL=http://localhost:11434, OLLAMA_MODEL=qwen2.5vl:7b
-```
-A 7B vision model takes several seconds per photo on a laptop CPU; a GPU helps. On the EC2 t4g.small it is too slow;
-run Ollama on a bigger machine and point `OLLAMA_URL` at it, or use Groq/Bedrock there.
 
 ## Rate limits and failures
 - The same photo is never inspected twice: results are cached by image hash.
@@ -52,7 +43,7 @@ run Ollama on a bigger machine and point `OLLAMA_URL` at it, or use Groq/Bedrock
    ```
 3. Run:
    ```bash
-   PROVIDERS=groq,ollama,bedrock PAUSE=2 make evaluate
+   PROVIDERS=groq,bedrock PAUSE=2 make evaluate
    ```
 It prints one table per provider: hazard accuracy, urgency accuracy, mean absolute severity error, JSON failure rate,
 rate-limited share and median seconds per photo, and writes `test-photos/results-<provider>.csv` with every answer.

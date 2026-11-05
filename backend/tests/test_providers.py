@@ -1,11 +1,11 @@
-"""Groq and Ollama providers against fake HTTP servers (httpx.MockTransport), plus rate-limit handling."""
+"""The Groq provider against a fake HTTP server (httpx.MockTransport), plus rate-limit handling."""
 import json
 
 import httpx
 import pytest
 
 from app.config import Settings
-from app.inspector import GroqInspector, InspectionError, InspectorBusy, OllamaInspector, make_inspector
+from app.inspector import GroqInspector, InspectionError, InspectorBusy, make_inspector
 from tests.conftest import make_result
 
 
@@ -57,24 +57,11 @@ def test_groq_invalid_json_retried_then_error():
         mock(GroqInspector("k", "m", "P"), lambda req: groq_answer(next(answers))).inspect(b"x")
 
 
-def test_ollama_request_and_answer():
-    seen = []
-
-    def handler(req):
-        seen.append((str(req.url), json.loads(req.content)))
-        return httpx.Response(200, json={"message": {"content": json.dumps(make_result(hazard="Debris", severity=3, urgency="LOW"))}})
-
-    o = mock(OllamaInspector("http://localhost:11434/", "qwen2.5vl:7b", "PROMPT"), handler)
-    assert o.inspect(b"JPEG").hazard_type == "Debris"
-    url, body = seen[0]
-    assert url == "http://localhost:11434/api/chat"
-    assert body["format"] == "json" and body["stream"] is False and len(body["messages"][1]["images"]) == 1
 
 
 def test_make_inspector_modes(tmp_path):
     assert make_inspector(Settings(ai_mode="fake")).mode == "fake"
     assert make_inspector(Settings(ai_mode="groq", groq_api_key="k")).mode == "groq"
-    assert make_inspector(Settings(ai_mode="ollama")).mode == "ollama"
     with pytest.raises(ValueError):
         make_inspector(Settings(ai_mode="groq", groq_api_key=""))
     with pytest.raises(ValueError):
@@ -100,41 +87,16 @@ def test_busy_error_says_why_and_retry_after_is_used(monkeypatch):
     assert "429" in str(e.value) and "tokens per minute" in str(e.value)
 
 
-def test_yolo_inspector_turns_boxes_into_a_report_result():
-    from app.inspector import YoloInspector
-
-    def handler(req: httpx.Request):
-        assert req.url.path == "/detect"
-        return httpx.Response(200, json={"model": "m", "detections": [
-            {"label": "pothole", "confidence": 0.82, "box": {"ymin": 500, "xmin": 200, "ymax": 800, "xmax": 600}},      # 12% of the photo
-            {"label": "pothole", "confidence": 0.5, "box": {"ymin": 100, "xmin": 100, "ymax": 160, "xmax": 180}},       # tiny
-            {"label": "longitudinal_crack", "confidence": 0.6, "box": {"ymin": 300, "xmin": 50, "ymax": 380, "xmax": 900}},
-            {"label": "mystery", "confidence": 0.9, "box": {"ymin": 0, "xmin": 0, "ymax": 10, "xmax": 10}},              # ignored
-        ]})
-
-    y = YoloInspector("http://yolo:8020")
-    y.http = httpx.Client(transport=httpx.MockTransport(handler))
-    r = y.inspect(b"JPEG")
-    assert [d.hazard_type for d in r.detections] == ["Pothole", "Road Fissure", "Pothole"]  # worst first, unknown label dropped
-    assert r.hazard_type == "Pothole" and 7.5 < r.severity_score < 9.5
-    assert all(d.estimated_dimensions.width_cm == 0 for d in r.detections)
 
 
-def test_yolo_with_nothing_found_is_a_clean_result():
-    from app.inspector import YoloInspector
-
-    y = YoloInspector("http://yolo:8020")
-    y.http = httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(200, json={"model": "m", "detections": []})))
-    r = y.inspect(b"JPEG")
-    assert r.hazard_type == "None" and r.detections == []
 
 
-def test_ollama_timeout_counts_as_busy_and_patient_copy_waits_longer():
+def test_timeout_counts_as_busy_and_patient_copy_waits_longer():
     def slow(req):
         raise httpx.ReadTimeout("slow", request=req)
 
-    o = mock(OllamaInspector("http://x", "m", "P"), slow)
+    g = mock(GroqInspector("k", "m", "P"), slow)
     with pytest.raises(InspectorBusy):
-        o.inspect(b"x")
-    assert OllamaInspector("http://x", "m", "P").timeout_s == 45
-    assert OllamaInspector("http://x", "m", "P").patient().timeout_s == 900
+        g.inspect(b"x")
+    assert GroqInspector("k", "m", "P").timeout_s == 60
+    assert GroqInspector("k", "m", "P").patient().timeout_s == 900

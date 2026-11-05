@@ -23,12 +23,6 @@ function ModelsBody() {
   const [runs, setRuns] = useState<Record<string, Run>>({});
   const [toast, show] = useToast();
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
-  const downloading = list.data?.models.some((m) => m.pull_state?.running) ?? false;
-  useEffect(() => {
-    if (!downloading) return;
-    const id = window.setInterval(() => list.reload(), 3000);
-    return () => window.clearInterval(id);
-  }, [downloading]); // eslint-disable-line react-hooks/exhaustive-deps
   if (officer.role !== "admin") return <p>{t("officer.notAllowed")}</p>;
 
   const pick = async (f: File | undefined) => {
@@ -51,16 +45,6 @@ function ModelsBody() {
 
   const runAll = async () => {
     for (const m of list.data?.models.filter((x) => x.runnable) ?? []) await run(m);
-  };
-
-  const download = async (m: ModelInfo) => {
-    if (!window.confirm(`Download ${m.label} from the Ollama registry onto the server's Ollama?\n\n${m.note}\n\nIt keeps downloading in the background.`)) return;
-    try {
-      await officerApi.pullModel(m.model);
-      list.reload();
-    } catch (e) {
-      show(e instanceof ApiError ? e.message : "Could not start the download.");
-    }
   };
 
   const makeLive = async (m: ModelInfo) => {
@@ -92,7 +76,6 @@ function ModelsBody() {
             <button className="btn small" disabled={!photo} onClick={runAll}>Run all available</button>
             <button className="btn outline small" onClick={list.reload}>Refresh list</button>
           </div>
-          {!d.ollama_running && <p className="notice card pad">Ollama is not running at {d.ollama_url}. Start it to see your local models.</p>}
           <div className="lab-grid">
             {d.models.map((m) => {
               const r = runs[m.id];
@@ -101,22 +84,9 @@ function ModelsBody() {
                   <div className="status-head">
                     <h2 style={{ fontSize: "1.05rem" }}>{m.label}</h2>
                     <span className="badge s-reported">{m.provider}</span>
-                    {m.size_gb !== null && <span className="small muted">{m.size_gb} GB</span>}
                     {m.live && <span className="badge s-resolved">In use for new reports</span>}
                   </div>
                   <p className="small muted">{m.note}</p>
-                  {m.pull && !m.pull_state?.running && (
-                    <div className="small">
-                      <button className="btn accent small" onClick={() => download(m)}>Download</button>{" "}
-                      or run <code>{m.pull}</code>
-                      {m.pull_state?.error && <p className="error-text" role="alert">Download failed: {m.pull_state.error}</p>}
-                    </div>
-                  )}
-                  {m.pull_state?.running && (
-                    <p className="small" role="status">
-                      <progress max={100} value={m.pull_state.percent} aria-label="Download progress" /> {m.pull_state.percent}% · {m.pull_state.status}
-                    </p>
-                  )}
                   <div className="btn-row">
                     <button className="btn small" disabled={!photo || !m.runnable || r?.state === "running"} onClick={() => run(m)}>
                       {r?.state === "running" ? "Running…" : "Run on this photo"}

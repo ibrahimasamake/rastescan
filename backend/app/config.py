@@ -16,7 +16,7 @@ def _env(name: str, default: str = "") -> str:
 
 @dataclass(frozen=True)
 class Settings:
-    # "bedrock", "groq" or "ollama" for real inspections. "fake" returns canned results for UI work and tests only.
+    # "bedrock" or "groq" for real inspections. "fake" returns canned results for UI work and tests only.
     ai_mode: str = field(default_factory=lambda: _env("AI_MODE", "bedrock"))
     aws_region: str = field(default_factory=lambda: _env("AWS_REGION", "ap-south-1"))
     # Region for Bedrock calls only. Defaults to aws_region; set it when Bedrock works in a different region.
@@ -25,10 +25,6 @@ class Settings:
     bedrock_model_id: str = field(default_factory=lambda: _env("BEDROCK_MODEL_ID", "apac.amazon.nova-pro-v1:0"))
     groq_api_key: str = field(default_factory=lambda: _env("GROQ_API_KEY"))
     groq_model: str = field(default_factory=lambda: _env("GROQ_MODEL", "qwen/qwen3.8-27b"))
-    ollama_url: str = field(default_factory=lambda: _env("OLLAMA_URL", "http://localhost:11434"))
-    ollama_model: str = field(default_factory=lambda: _env("OLLAMA_MODEL", "qwen2.5vl:7b"))
-    # The separate YOLO road-damage detector (services/yolo).
-    yolo_url: str = field(default_factory=lambda: _env("YOLO_URL", "http://localhost:8020"))
     # How often the server retries reports saved without an AI answer. 0 turns the worker off.
     rescan_every_s: int = field(default_factory=lambda: int(_env("RESCAN_EVERY_S", "20")))
     s3_bucket: str = field(default_factory=lambda: _env("S3_BUCKET"))

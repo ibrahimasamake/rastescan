@@ -96,11 +96,10 @@ Replace the single shared PIN with real officer accounts, but keep `DASHBOARD_PI
   status history, and for the SLA and queue order.
 
 ## 7. AI provider (any of these, chosen by `AI_MODE`)
-The inspector layer already supports four modes in `backend/app/inspector.py`:
+The inspector layer already supports three modes in `backend/app/inspector.py`:
 - `bedrock`: Amazon Nova (production when the AWS account is unlocked).
 - `groq`: free Groq key. `export GROQ_API_KEY=...` then `AI_MODE=groq`. Model default
   `qwen/qwen3.8-27b`; if Groq has retired it, pick a current vision model from console.groq.com.
-- `ollama`: fully local and free. `ollama pull qwen2.5vl:7b`, then `AI_MODE=ollama` (`OLLAMA_URL`, `OLLAMA_MODEL` to change).
 - `fake`: canned results for UI work and tests; the app shows a "Test mode" banner.
 Do not weaken the JSON schema in `schema.py`: the server recomputes urgency from the severity score and the model only
 suggests. Add `scripts/evaluate.py` support to compare providers on `test-photos/` (accuracy of hazard type, mean absolute
@@ -134,7 +133,7 @@ hazard names and statuses translated. Date and number formats follow the languag
   history, and can tell at a glance whether it is resolved.
 - An officer logs in, works the queue top to bottom, uploads a repair photo, and the public page flips to **Resolved** with a
   before/after slider within seconds.
-- The same flows work with `AI_MODE=fake`, `groq` and `ollama`, and with `bedrock` once AWS allows it.
+- The same flows work with `AI_MODE=fake` and `groq`, and with `bedrock` once AWS allows it.
 - No secret, key, PIN or personal data in git or in any public API response. Lighthouse accessibility score at least 95 and
   performance at least 85 on mobile for the home page.
 - All tests, lint, type-check and build pass; README explains running everything on a laptop in under 10 minutes.

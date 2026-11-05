@@ -106,7 +106,7 @@ make infra deploy
 
 ## Switch AI provider
 `RASTESCAN_AI_MODE=groq GROQ_API_KEY=gsk_... make deploy` switches the server to Groq; `RASTESCAN_AI_MODE=bedrock
-make deploy` switches back. See `docs/ai-providers.md` for Ollama and for comparing providers.
+make deploy` switches back. See `docs/ai-providers.md` for comparing providers.
 
 ## Check the AI before the expo
 Put 20–30 labelled photos in `test-photos/` with `labels.csv`, then run the evaluation from your laptop with your

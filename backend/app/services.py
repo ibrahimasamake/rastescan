@@ -78,7 +78,6 @@ class Ctx:
     limiter: RateLimiter
     login_limiter: RateLimiter
     ward_names: dict[str, str] = field(default_factory=dict)
-    pulls: dict = field(default_factory=dict)  # Ollama model downloads started from the admin Model lab
 
     @property
     def model_tag(self) -> str:
@@ -333,7 +332,7 @@ def rescan(ctx: Ctx, row: dict, inspector: Inspector | None = None) -> dict:
 def process_pending(ctx: Ctx) -> int:
     """Scan, oldest first, reports that were saved without an AI answer. Returns how many were finished.
 
-    Slow models (Ollama on a laptop CPU) and a busy free tier both end up here: the citizen's report is saved at once
+    A slow model and a busy free tier both end up here: the citizen's report is saved at once
     and this fills in the answer. It stops at the first failure so a down or limited provider is not hammered.
     """
     patient = getattr(ctx.inspector, "patient", None)
