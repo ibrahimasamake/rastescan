@@ -114,7 +114,7 @@ def create_app(settings: Settings | None = None, inspector: Inspector | None = N
         if (dist / "assets").is_dir():
             app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
 
-        @app.get("/{path:path}", include_in_schema=False)
+        @app.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
         def spa(path: str):
             if path.startswith("api/"):
                 raise HTTPException(404)
