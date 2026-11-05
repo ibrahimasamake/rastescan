@@ -416,6 +416,8 @@ export const en = {
   "officer.notAllowed": "Only an administrator can manage officers.",
   // impact, live feed, cost
   "about.dataCredit": "Demo reports use road photos from the open RDD2022 dataset (Arya, Maeda, Ghosh, Toshniwal and Sekimoto, 2024, CC BY 4.0). Places and dates in the demo are made up and every demo report is marked as such.",
+  "hero.kicker": "The real problem on our roads",
+  "hero.watch": "Watch the live map",
   "nav.impact": "Impact",
   "impact.title": "Impact in numbers",
   "impact.lead": "What the repair queue is worth, how fast the city is fixing roads, and where the trouble is. Public and live.",

@@ -408,3 +408,71 @@ dialog.modal::backdrop { background: rgba(11, 37, 69, 0.6); }
 @keyframes tile-in { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
 @keyframes live-blink { 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .tile, .tile.fresh, .live-tag i { animation: none; transition: none; } }
+
+/* Home banner reel (GSAP): photo tiles, blast effects, AI box, headline and numbers over a dark shade */
+.reel { position: relative; overflow: hidden; isolation: isolate; background: #071a33; color: #fff; min-height: min(88vh, 720px); display: flex; align-items: flex-end; border-bottom: 4px solid var(--saffron); }
+.reel-stage { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.reel-scene { position: absolute; inset: 0; will-change: transform; }
+.reel-tile { position: absolute; background-repeat: no-repeat; will-change: transform, opacity; }
+.reel-fx { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+.reel-flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+.reel-ring { position: absolute; width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; border: 4px solid var(--saffron); opacity: 0; }
+.reel-spark { position: absolute; width: 8px; height: 8px; margin: -4px; border-radius: 50%; background: var(--saffron); box-shadow: 0 0 10px 2px rgba(242,154,46,.85); opacity: 0; }
+.reel-shade { position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(90deg, rgba(7,26,51,.92) 0%, rgba(7,26,51,.6) 46%, rgba(7,26,51,.08) 78%), linear-gradient(0deg, rgba(7,26,51,.9), transparent 42%); }
+.reel-content { position: relative; z-index: 4; padding-block: 56px 96px; display: flex; flex-direction: column; gap: 14px; }
+.reel-content > * { max-width: 660px; }
+.reel-title { color: #fff; font-size: clamp(1.9rem, 5vw, 3.5rem); line-height: 1.08; perspective: 700px; text-shadow: 0 3px 18px rgba(0,0,0,.5); }
+.reel-word { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .08em; }
+.reel-word > span { display: inline-block; }
+.reel-kicker { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; margin: 0; background: #d92b20; padding: 5px 12px; border-radius: 999px; font: 700 .8rem/1.4 var(--body); text-transform: uppercase; letter-spacing: .06em; }
+.reel-lead { color: rgba(255,255,255,.9); margin: 0; font-size: 1.1rem; }
+.reel-hint { color: rgba(255,255,255,.78); margin: 0; }
+.reel-ghost { background: rgba(255,255,255,.14); color: #fff; border-color: #fff; }
+.reel-ghost:hover { background: rgba(255,255,255,.26); }
+.reel-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); background: rgba(255,255,255,.25); border-color: rgba(255,255,255,.3); }
+.reel-stats .stat { background: rgba(7,26,51,.72); backdrop-filter: blur(6px); }
+.reel-stats .stat b { color: #fff; }
+.reel-stats .stat span { color: rgba(255,255,255,.82); }
+.reel-stats .stat.warn b { color: #ffb4a8; }
+.reel-caption { position: absolute; right: 26px; bottom: 58px; z-index: 5; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; max-width: 38%; text-shadow: 0 2px 12px rgba(0,0,0,.75); }
+.reel-caption b { font: 700 1.35rem/1.2 var(--head); }
+.reel-pips { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; gap: 6px; padding: 0 26px 16px; }
+.reel-pips span { flex: 1; height: 4px; background: rgba(255,255,255,.3); border-radius: 2px; overflow: hidden; }
+.reel-pips i { display: block; height: 100%; background: var(--saffron); transform: scaleX(0); transform-origin: left; }
+.reel-box { position: absolute; border: 3px solid var(--c, #ff3b30); border-radius: 6px; box-shadow: 0 0 0 0 rgba(255,255,255,.7), inset 0 0 20px rgba(255,255,255,.12); }
+.reel-box span { position: absolute; left: -3px; top: -3px; margin: 0; border-radius: 6px 0 6px 0; background: var(--c, #ff3b30); color: #fff; font: 700 .85rem/1 var(--body); padding: 6px 9px; white-space: nowrap; }
+.reel-box.u-HIGH { --c: #ff8a1f; } .reel-box.u-MEDIUM { --c: #ffc52e; } .reel-box.u-MEDIUM span { color: #1a1f26; } .reel-box.u-LOW { --c: #5aa9ff; }
+@media (max-width: 700px) {
+  .reel { min-height: 92svh; }
+  .reel-shade { background: linear-gradient(0deg, rgba(7,26,51,.96) 0%, rgba(7,26,51,.78) 52%, rgba(7,26,51,.1) 100%); }
+  .reel-content { padding-block: 40px 70px; gap: 12px; }
+  .reel-title { font-size: clamp(1.6rem, 7.4vw, 2.1rem); }
+  .reel-lead { font-size: 1rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .reel-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .reel-stats .stat { padding: 10px 12px; }
+  .reel-stats .stat b { font-size: 1.5rem; }
+  .reel-caption { right: 14px; top: 14px; bottom: auto; max-width: 62%; }
+  .reel-caption b { font-size: 1.1rem; }
+  .reel-pips { padding: 0 14px 12px; }
+  .reel-ctas .btn { flex: 1 1 100%; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) { .reel-kicker, .reel-ctas, .reel-lead, .reel-title { animation: none; } }
+
+/* Desktop: text on a dark left panel, the photo (and its explosions and AI box) fills the right so the damage is never hidden */
+@media (min-width: 901px) {
+  .reel-stage, .reel-fx { left: 36%; }
+  .reel-shade { background: linear-gradient(90deg, #071a33 0%, #071a33 35%, rgba(7,26,51,.55) 42%, rgba(7,26,51,0) 60%), linear-gradient(0deg, rgba(7,26,51,.85), transparent 28%); }
+  .reel-content > * { max-width: min(600px, 41vw); }
+  .reel-title { font-size: clamp(1.9rem, 3.3vw, 3.1rem); }
+  .reel-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: min(420px, 38vw); }
+}
+
+/* Phones: the photo gets its own band at the top of the banner; the text sits below on the dark panel */
+@media (max-width: 700px) {
+  .reel { min-height: 0; }
+  .reel-stage, .reel-fx { bottom: auto; height: 50svh; }
+  .reel-shade { background: linear-gradient(180deg, rgba(7,26,51,0) 0, rgba(7,26,51,0) 40svh, #071a33 52svh, #071a33 100%); }
+  .reel-content { margin-top: 47svh; padding-block: 0 56px; }
+  .reel-caption { top: 12px; right: 12px; }
+}

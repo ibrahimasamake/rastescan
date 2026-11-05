@@ -1,22 +1,12 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
-import { Icon } from "../components/Icons";
+import HeroReel from "../components/HeroReel";
 import { ActivityFeed, ReportCard } from "../components/Report";
 import { Empty, Skeleton, useAsync } from "../components/States";
 import { useI18n } from "../i18n";
-import { usePortal } from "../portal";
 
 const MapView = lazy(() => import("../components/MapView"));
-
-function Stat({ value, label, warn = false }: { value: string | null; label: string; warn?: boolean }) {
-  return (
-    <div className={`stat ${warn ? "warn" : ""}`}>
-      {value === null ? <Skeleton h={30} w="60%" /> : <b>{value}</b>}
-      <span>{label}</span>
-    </div>
-  );
-}
 
 /** Renders children only once the box scrolls near the screen, so the map code is not loaded up front. */
 function WhenVisible({ children, fallback }: { children: React.ReactNode; fallback: React.ReactNode }) {
@@ -36,36 +26,12 @@ function WhenVisible({ children, fallback }: { children: React.ReactNode; fallba
 
 export default function Home() {
   const { t, num } = useI18n();
-  const { stats } = usePortal();
   const open = useAsync(() => api.reports({ status: "open", per_page: 300, sort: "urgency" }), [], 60000);
   const resolved = useAsync(() => api.recentlyResolved(), [], 30000);
   const wards = useAsync(() => api.wards(), []);
-  const s = stats;
   return (
     <>
-      <section className="hero">
-        <div className="wrap">
-          <div className="hero-text">
-            <h1>{t("home.title")}</h1>
-            <p className="lead">{t("home.lead")}</p>
-            <div className="btn-row">
-              <Link to="/report" className="btn accent big"><Icon name="camera" size={22} /> {t("home.cta")}</Link>
-            </div>
-            <p className="small muted">{t("home.ctaHint")}</p>
-            <Link to="/map">{t("home.browse")}</Link>
-          </div>
-          <section aria-labelledby="live">
-            <h2 id="live" className="sr-only">{t("home.stats")}</h2>
-            <div className="stats" aria-live="polite">
-              <Stat value={s ? num(s.reported_today) : null} label={t("stat.today")} />
-              <Stat value={s ? num(s.open_now) : null} label={t("stat.open")} />
-              <Stat value={s ? num(s.overdue_now) : null} label={t("stat.overdue")} warn={!!s?.overdue_now} />
-              <Stat value={s ? num(s.resolved_this_month) : null} label={t("stat.resolvedMonth")} />
-              <Stat value={s ? (s.avg_days_to_fix === null ? "–" : num(s.avg_days_to_fix, 1)) : null} label={t("stat.avgDays")} />
-            </div>
-          </section>
-        </div>
-      </section>
+      <HeroReel />
 
       <div className="wrap page">
         <section className="section" aria-labelledby="map-h">
