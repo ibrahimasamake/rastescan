@@ -168,13 +168,9 @@ export default function HeroReel() {
   useEffect(() => {
     const host = stage.current, fxEl = fx.current, caption = cap.current, pipBar = pips.current;
     if (!host || !fxEl || !caption || !pipBar || !scenes.length) return;
-    if (reduced) {
-      const s = scenes[0];
-      host.style.cssText = `background:#0b2545 url("${s.img.src}") 50% 62%/cover no-repeat`;
-      return () => { host.style.cssText = ""; };
-    }
     gsap.ticker.fps(FPS);
     gsap.ticker.lagSmoothing(0);
+    const calm = reduced; // "reduce motion": the same shots as a gentle crossfade, with no shattering, flashes or shaking
     let live: Live | null = null;
     let index = 0;
     let resizeTimer = 0;
@@ -203,7 +199,10 @@ export default function HeroReel() {
         host.prepend(next.wrap); // under the old shards, which fly across it
         const tl = gsap.timeline({ onComplete: () => { index = i + 1; play(i + 1, true); } });
 
-        if (live && withBlast) {
+        if (live && withBlast && calm) {
+          const old = live;
+          tl.to(old.tiles, { opacity: 0, duration: 1.2, ease: "power1.inOut" }, 0).add(() => old.wrap.remove(), 1.5);
+        } else if (live && withBlast) {
           const old = live;
           detonate(old.origin);
           tl.to(old.tiles, {
@@ -218,13 +217,14 @@ export default function HeroReel() {
 
         // Assemble the new photo from shards flying back in towards their places.
         const at = withBlast ? 0.4 : 0;
-        tl.fromTo(next.tiles, {
+        if (calm) tl.fromTo(next.tiles, { opacity: 0 }, { opacity: 1, duration: 1.2, ease: "power1.inOut" }, 0);
+        else tl.fromTo(next.tiles, {
           x: (_i, el) => blast(el, next.origin, Math.max(g.cw, g.ch) * 0.8).x, y: (_i, el) => blast(el, next.origin, Math.max(g.cw, g.ch) * 0.8).y,
           rotation: () => rand(-200, 200), scale: () => rand(0.3, 2.2), opacity: 0,
         }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, duration: 1.15, ease: "expo.out", stagger: { amount: 0.4, from: "center" } }, at);
 
         // Slow push-in on the photo, like a camera move
-        tl.fromTo(next.wrap, { scale: 1.02 }, { scale: 1.13, transformOrigin: `${next.origin.x}px ${next.origin.y}px`, duration: SCENE_S + 1, ease: "none" }, at);
+        if (!calm) tl.fromTo(next.wrap, { scale: 1.02 }, { scale: 1.13, transformOrigin: `${next.origin.x}px ${next.origin.y}px`, duration: SCENE_S + 1, ease: "none" }, at);
 
         // The damage is found and boxed
         if (s.box && s.box.xmax > s.box.xmin) {
@@ -240,9 +240,13 @@ export default function HeroReel() {
           chip.textContent = s.chip;
           box.appendChild(chip);
           next.wrap.appendChild(box);
-          tl.fromTo(box, { scale: 2.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.55, ease: "back.out(2.2)" }, at + 1.5);
-          tl.fromTo(chip, { xPercent: -30, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, at + 1.9);
-          tl.to(box, { boxShadow: "0 0 0 10px rgba(255,255,255,0)", repeat: 3, yoyo: true, duration: 0.5, ease: "sine.inOut" }, at + 2.1);
+          if (calm) {
+            tl.fromTo(box, { opacity: 0 }, { opacity: 1, duration: 0.8 }, at + 1.5);
+          } else {
+            tl.fromTo(box, { scale: 2.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.55, ease: "back.out(2.2)" }, at + 1.5);
+            tl.fromTo(chip, { xPercent: -30, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, at + 1.9);
+            tl.to(box, { boxShadow: "0 0 0 10px rgba(255,255,255,0)", repeat: 3, yoyo: true, duration: 0.5, ease: "sine.inOut" }, at + 2.1);
+          }
         }
 
         // Caption and progress
@@ -252,7 +256,7 @@ export default function HeroReel() {
         const sub = document.createElement("span");
         sub.textContent = s.sub;
         caption.append(title, sub);
-        tl.fromTo(caption, { y: 34, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, at + 0.9);
+        tl.fromTo(caption, { y: calm ? 0 : 34, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, at + 0.9);
         const dots = Array.from(pipBar.children) as HTMLElement[];
         dots.forEach((p, k) => p.classList.toggle("on", k === i % scenes.length));
         const fill = dots[i % scenes.length]?.firstElementChild;
