@@ -128,8 +128,8 @@ def test_azure_404_and_401_explain_what_to_check():
     from app.inspector import AzureInspector
 
     for status, word in ((404, "no deployment named 'gone'"), (401, "rejected the key")):
-        a = mock(AzureInspector("https://r.openai.azure.com/openai/v1", "KEY", "gone", "P"),
+        a = mock(AzureInspector("https://r.openai.azure.com/openai/v1", "s3cret-value-123", "gone", "P"),
                  lambda req, s=status: httpx.Response(s, text='{"error":{"code":"DeploymentNotFound"}}'))
         with pytest.raises(RuntimeError) as e:
             a.inspect(b"x")
-        assert word in str(e.value) and "KEY" not in str(e.value)
+        assert word in str(e.value) and "s3cret-value-123" not in str(e.value)
