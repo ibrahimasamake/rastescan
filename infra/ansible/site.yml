@@ -11,13 +11,14 @@
       ansible.builtin.assert:
         that:
           - (admin_email | length > 0 and admin_password | length >= 10) or dashboard_pin | length >= 4
-          - ai_mode in ['bedrock', 'groq']
+          - ai_mode in ['bedrock', 'groq', 'azure']
           - ai_mode != 'groq' or groq_api_key | length > 0
+          - ai_mode != 'azure' or (azure_endpoint | length > 0 and azure_key | length > 0 and azure_deployment | length > 0)
           - s3_bucket is defined and s3_bucket | length > 0
           - bedrock_model_id is defined
         fail_msg: >-
           Set RASTESCAN_ADMIN_EMAIL and RASTESCAN_ADMIN_PASSWORD (10+ characters) or RASTESCAN_DASHBOARD_PIN,
-          pick RASTESCAN_AI_MODE (bedrock or groq; groq also needs GROQ_API_KEY), and run terraform apply
+          pick RASTESCAN_AI_MODE (bedrock, groq or azure; groq also needs GROQ_API_KEY), and run terraform apply
           so inventory/hosts.ini has the bucket and model.
         quiet: true
 

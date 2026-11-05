@@ -8,6 +8,7 @@ Pick the provider with `AI_MODE`.
 |---|---|---|---|
 | `bedrock` | Pay per call (cents per photo with Nova Lite/Pro) | AWS account with Bedrock access; the EC2 role does auth | Production on AWS |
 | `groq` | Free tier with rate limits | `GROQ_API_KEY` from console.groq.com | Demos, the expo, low volume |
+| `azure` | Pays from Azure credit (Azure for Students) | A vision model deployed in Azure, e.g. `gpt-4.1-mini`; endpoint, key, deployment name | Backup to Groq, higher limits |
 | `fake` | Free | Nothing | UI work and tests only; the portal shows a "Test mode" banner |
 
 ## Bedrock (Amazon Nova)
@@ -24,6 +25,16 @@ AI_MODE=groq make api
 ```
 Default model `qwen/qwen3.8-27b`. If Groq has retired it, pick a current vision model on
 console.groq.com and set `GROQ_MODEL=...`. Deploy: `RASTESCAN_AI_MODE=groq GROQ_API_KEY=gsk_... make deploy`.
+
+## Azure (student credit)
+Create an Azure OpenAI / Foundry resource in a region your subscription allows, deploy `gpt-4.1-mini`, then in your terminal:
+```bash
+export AZURE_ENDPOINT=https://YOUR-RESOURCE.openai.azure.com/openai/v1
+export AZURE_KEY=...                 # Keys and Endpoint page of the resource; never commit it
+export AZURE_DEPLOYMENT=your-deployment-name
+AI_MODE=azure make api
+```
+Deploy: `RASTESCAN_AI_MODE=azure AZURE_ENDPOINT=... AZURE_KEY=... AZURE_DEPLOYMENT=... make deploy`.
 
 ## Rate limits and failures
 - The same photo is never inspected twice: results are cached by image hash.

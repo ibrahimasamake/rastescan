@@ -16,7 +16,7 @@ def _env(name: str, default: str = "") -> str:
 
 @dataclass(frozen=True)
 class Settings:
-    # "bedrock" or "groq" for real inspections. "fake" returns canned results for UI work and tests only.
+    # "bedrock", "groq" or "azure" for real inspections. "fake" returns canned results for UI work and tests only.
     ai_mode: str = field(default_factory=lambda: _env("AI_MODE", "bedrock"))
     aws_region: str = field(default_factory=lambda: _env("AWS_REGION", "ap-south-1"))
     # Region for Bedrock calls only. Defaults to aws_region; set it when Bedrock works in a different region.
@@ -27,6 +27,10 @@ class Settings:
     groq_model: str = field(default_factory=lambda: _env("GROQ_MODEL", "qwen/qwen3.8-27b"))
     # How often the server retries reports saved without an AI answer. 0 turns the worker off.
     rescan_every_s: int = field(default_factory=lambda: int(_env("RESCAN_EVERY_S", "20")))
+    # Azure: the OpenAI-compatible endpoint of your resource, its key, and the name you gave the model deployment.
+    azure_endpoint: str = field(default_factory=lambda: _env("AZURE_ENDPOINT"))
+    azure_key: str = field(default_factory=lambda: _env("AZURE_KEY"))
+    azure_deployment: str = field(default_factory=lambda: _env("AZURE_DEPLOYMENT"))
     s3_bucket: str = field(default_factory=lambda: _env("S3_BUCKET"))
     data_dir: Path = field(default_factory=lambda: Path(_env("DATA_DIR", str(REPO_ROOT / "backend" / "data"))))
     web_dist: Path = field(default_factory=lambda: Path(_env("WEB_DIST", str(REPO_ROOT / "web" / "dist"))))

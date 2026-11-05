@@ -100,3 +100,25 @@ def test_timeout_counts_as_busy_and_patient_copy_waits_longer():
         g.inspect(b"x")
     assert GroqInspector("k", "m", "P").timeout_s == 60
     assert GroqInspector("k", "m", "P").patient().timeout_s == 900
+
+
+def test_azure_request_shape_and_reasoning_model_fallback():
+    seen = []
+
+    def handler(req: httpx.Request):
+        body = json.loads(req.content)
+        seen.append((str(req.url), req.headers.get("api-key"), body))
+        if "temperature" in body:
+            return httpx.Response(400, text='{"error":{"message":"Unsupported value: temperature does not support 0"}}')
+        return groq_answer(json.dumps(make_result()))
+
+    from app.inspector import AzureInspector
+
+    a = mock(AzureInspector("https://r.openai.azure.com/openai/v1/", "KEY", "my-deploy", "PROMPT"), handler)
+    assert a.inspect(b"JPEG").hazard_type == "Pothole"
+    url, key, first = seen[0]
+    assert url == "https://r.openai.azure.com/openai/v1/chat/completions" and key == "KEY"
+    assert first["model"] == "my-deploy" and first["messages"][1]["content"][1]["image_url"]["url"].startswith("data:image/jpeg")
+    assert "temperature" not in seen[1][2]  # retried without it
+    with pytest.raises(ValueError):
+        AzureInspector("", "k", "d", "P")

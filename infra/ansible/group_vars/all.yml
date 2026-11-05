@@ -5,6 +5,9 @@ repo_root: "{{ playbook_dir }}/../.."
 # AI provider. Override per deploy: RASTESCAN_AI_MODE=groq make deploy
 ai_mode: "{{ lookup('env', 'RASTESCAN_AI_MODE') | default('bedrock', true) }}"
 groq_api_key: "{{ lookup('env', 'GROQ_API_KEY') }}"
+azure_endpoint: "{{ lookup('env', 'AZURE_ENDPOINT') }}"
+azure_key: "{{ lookup('env', 'AZURE_KEY') }}"
+azure_deployment: "{{ lookup('env', 'AZURE_DEPLOYMENT') }}"
 groq_model: "{{ lookup('env', 'GROQ_MODEL') | default('qwen/qwen3.8-27b', true) }}"
 site_name: "{{ lookup('env', 'RASTESCAN_SITE_NAME') | default('Municipal Road Services', true) }}"
 # First administrator, created on first start. Read from your shell, never stored in git.

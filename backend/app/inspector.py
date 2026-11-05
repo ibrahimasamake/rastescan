@@ -1,6 +1,7 @@
 """Sends a prepared photo to a vision model and returns a validated Inspection.
 
-Providers, chosen by AI_MODE: bedrock (Amazon Nova), groq (free key, hosted vision model) and fake (canned answers for
+Providers, chosen by AI_MODE: bedrock (Amazon Nova), groq (free key, hosted vision model), azure (a vision model
+deployed in Azure) and fake (canned answers for
 tests and UI work). Every provider gets the same prompt and the same JSON validation; the server, not the model,
 decides urgency afterwards.
 """
@@ -229,6 +230,41 @@ class GroqInspector(_HttpInspector):
         return resp.json()["choices"][0]["message"]["content"] or ""
 
 
+class AzureInspector(_HttpInspector):
+    """A vision model deployed in Azure (Foundry / Azure OpenAI), through its OpenAI-compatible v1 endpoint.
+
+    Needs AZURE_ENDPOINT (like https://NAME.openai.azure.com/openai/v1), AZURE_KEY and AZURE_DEPLOYMENT, the name
+    you gave the model when deploying it. Use a model that accepts images, such as gpt-4.1-mini.
+    """
+
+    mode = "azure"
+
+    def __init__(self, endpoint: str, api_key: str, deployment: str, prompt: str):
+        if not (endpoint and api_key and deployment):
+            raise ValueError("AI_MODE=azure needs AZURE_ENDPOINT, AZURE_KEY and AZURE_DEPLOYMENT")
+        super().__init__(prompt, timeout_s=60)
+        self.url = endpoint.rstrip("/") + "/chat/completions"
+        self.api_key, self.model = api_key, deployment
+
+    def _first(self, jpeg: bytes) -> list:
+        data_url = "data:image/jpeg;base64," + base64.b64encode(jpeg).decode()
+        return [
+            {"role": "system", "content": self.prompt},
+            {"role": "user", "content": [{"type": "text", "text": ASK}, {"type": "image_url", "image_url": {"url": data_url}}]},
+        ]
+
+    def _post(self, messages: list) -> str:
+        body = {"model": self.model, "messages": messages, "temperature": 0, "max_completion_tokens": 1200,
+                "response_format": {"type": "json_object"}}
+        headers = {"api-key": self.api_key}
+        resp = self.http.post(self.url, headers=headers, json=body)
+        if resp.status_code == 400 and "temperature" in resp.text:  # reasoning models (gpt-5 family) only accept the default
+            body.pop("temperature")
+            resp = self.http.post(self.url, headers=headers, json=body)
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"] or ""
+
+
 _FAKE_RESULTS = [
     {"hazard_type": "Pothole", "confidence": 0.9, "severity_score": 7.6, "urgency_level": "HIGH",
      "repair_recommendation": "Saw-cut, tack coat, hot-mix asphalt patch with roller compaction.",
@@ -283,7 +319,9 @@ def build_inspector(settings, provider: str, model: str | None = None) -> Inspec
         return BedrockInspector(model or settings.bedrock_model_id, settings.bedrock_region, prompt)
     if provider == "groq":
         return GroqInspector(settings.groq_api_key, model or settings.groq_model, prompt)
-    raise ValueError(f"Unknown AI_MODE {provider!r}; use bedrock, groq or fake")
+    if provider == "azure":
+        return AzureInspector(settings.azure_endpoint, settings.azure_key, model or settings.azure_deployment, prompt)
+    raise ValueError(f"Unknown AI_MODE {provider!r}; use bedrock, groq, azure or fake")
 
 
 def make_inspector(settings) -> Inspector:

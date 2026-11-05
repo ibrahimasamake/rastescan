@@ -290,7 +290,7 @@ export interface Analytics {
 
 export interface ModelInfo {
   id: string;
-  provider: "groq" | "bedrock" | "fake";
+  provider: "groq" | "azure" | "bedrock" | "fake";
   model: string;
   label: string;
   runnable: boolean;
