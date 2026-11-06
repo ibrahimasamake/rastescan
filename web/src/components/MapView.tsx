@@ -8,6 +8,7 @@ import { absUrl, type PublicReport, type Urgency } from "../api";
 import { ago, duration, hazardLabel, statusLabel, urgencyLabel } from "../format";
 import { useI18n } from "../i18n";
 import { StatusBadge, UrgencyBadge } from "./Badges";
+import { Place } from "./Report";
 import { Icon } from "./Icons";
 import { PIN_COLOURS } from "../pins";
 
@@ -162,6 +163,7 @@ function TourCard({ r, i, n, playing, onPrev, onNext, onToggle }: {
         <div className="tour-badges"><UrgencyBadge urgency={r.urgency} /><StatusBadge status={r.public_status} /></div>
         <h3>{hazardLabel(t, r.hazard_type)} · {r.code}</h3>
         <p className="small muted">{r.ward?.name ? `${r.ward.name} · ` : ""}{ago(t, r.created_at)}{r.reported_count > 1 ? ` · ${t("tour.people", { n: r.reported_count })}` : ""}</p>
+        <Place address={r.address} />
         {r.repair_recommendation && <p className="small tour-rec" lang="en">{r.repair_recommendation}</p>}
         <div className="tour-controls">
           <button type="button" className="btn outline small" onClick={onPrev} aria-label={t("tour.prev")}>‹</button>
@@ -204,6 +206,7 @@ function ReportList({ items, activeCode, open, onToggle, onPick }: {
                 <span className="mi-main">
                   <b>{hazardLabel(t, r.hazard_type)} · {r.code}</b>
                   <span className="small muted">{r.ward?.name ? `${r.ward.name} · ` : ""}{urgencyLabel(t, r.urgency)} · {statusLabel(t, r.public_status)} · {ago(t, r.created_at)}</span>
+                  <Place address={r.address} />
                 </span>
                 <img src={absUrl(r.after_photo_url ?? r.photo_url)} alt="" loading="lazy" />
               </button>

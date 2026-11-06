@@ -1,4 +1,6 @@
 /** Client for the RasteScan API. VITE_API_BASE is empty for the web app (same origin) and the CloudFront URL for the Android app. */
+import type { Address } from "./address";
+
 export const API_BASE: string = (import.meta.env.VITE_API_BASE ?? "").replace(/\/$/, "");
 
 export const HAZARDS = ["Pothole", "Open Manhole", "Road Fissure", "Waterlogging", "Debris", "Slab Displacement"] as const;
@@ -41,6 +43,8 @@ export interface PublicReport {
   lat: number | null;
   lng: number | null;
   ward: Ward | null;
+  /** Null until the server has looked this location up. */
+  address: Address | null;
   hazard_type: Hazard;
   severity: number;
   urgency: Urgency;

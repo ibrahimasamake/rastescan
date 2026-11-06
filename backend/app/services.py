@@ -6,6 +6,7 @@ and everything that leaves the server through public_* functions so private fiel
 import hashlib
 import json
 import logging
+import threading
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -161,6 +162,7 @@ def public_item(ctx: Ctx, row: dict) -> dict:
         "lat": row["lat"],
         "lng": row["lng"],
         "ward": ward_info(ctx, row.get("ward_code")),
+        "address": known_address(ctx, row),
         "hazard_type": row["hazard_type"],
         "severity": row["severity"],
         "urgency": row["urgency"],
@@ -229,20 +231,51 @@ def citizen_item(ctx: Ctx, row: dict) -> dict:
 
 
 # ---------- writes ----------
+def _location(row: dict) -> str:
+    return f"{row['lat']:.5f},{row['lng']:.5f}"
+
+
+def known_address(ctx: Ctx, row: dict) -> dict | None:
+    """The address already kept for a report's pin. Never touches the network, so lists of reports can use it."""
+    if row["lat"] is None or row["lng"] is None:
+        return None
+    known = ctx.db.one("SELECT address_json FROM address_cache WHERE location = ?", (_location(row),))
+    return json.loads(known["address_json"]) if known else None
+
+
 def address(ctx: Ctx, row: dict) -> dict | None:
     """The nearest known address to a report's pin. It is reference data about a place, not a change to the report, so it has no
     audit entry. Answers are kept per location; a failed lookup is not kept, so the next reader tries again."""
-    if row["lat"] is None or row["lng"] is None or not ctx.settings.geocode_url:
+    if row["lat"] is None or row["lng"] is None:
         return None
-    location = f"{row['lat']:.5f},{row['lng']:.5f}"
-    known = ctx.db.one("SELECT address_json FROM address_cache WHERE location = ?", (location,))
-    if known:
-        return json.loads(known["address_json"])
+    known = known_address(ctx, row)
+    if known is not None or not ctx.settings.geocode_url:
+        return known
     found = geocode.reverse(ctx.settings.geocode_url, row["lat"], row["lng"])
     if found:
         ctx.db.execute("INSERT OR REPLACE INTO address_cache (location, address_json, created_at) VALUES (?, ?, ?)",
-                       (location, json.dumps(found), iso(now())))
+                       (_location(row), json.dumps(found), iso(now())))
     return found
+
+
+def fill_addresses(ctx: Ctx, stop: threading.Event | None = None) -> int:
+    """Look up every report location not known yet, newest first, so list pages can show PIN code and state. geocode.reverse spaces
+    the requests out. A failure means the service is down or limiting us, so this stops and the next pass tries again."""
+    if not ctx.settings.geocode_url:
+        return 0
+    known = {r["location"] for r in ctx.db.query("SELECT location FROM address_cache")}
+    filled = 0
+    for row in ctx.db.query("SELECT lat, lng FROM reports WHERE parent_id IS NULL AND lat IS NOT NULL AND lng IS NOT NULL ORDER BY id DESC"):
+        if stop is not None and stop.is_set():
+            break
+        location = _location(row)
+        if location in known:
+            continue
+        if not address(ctx, row):
+            break
+        known.add(location)
+        filled += 1
+    return filled
 
 
 def set_status(ctx: Ctx, row: dict, status: str, actor: str, officer_id: int | None = None,

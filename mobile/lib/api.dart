@@ -71,6 +71,11 @@ class Report {
   double? get lat => json['lat'] == null ? null : _d(json['lat']);
   double? get lng => json['lng'] == null ? null : _d(json['lng']);
   String? get ward => json['ward'] is Map ? '${json['ward']['name']}' : null;
+  String? get pin => json['address'] is Map ? json['address']['pin'] as String? : null;
+  String? get state => json['address'] is Map ? json['address']['state'] as String? : null;
+
+  /// "PIN code 560045 · Karnataka", or null until the server has looked this location up.
+  String? get place => placeLine(pin, state);
   String? get assignee => json['assignee'] as String?;
   int get reportedCount => _i(json['reported_count']);
   int get costInr => _i(json['repair_cost_inr'] ?? (json['repair_estimate'] ?? {})['total_inr']);
@@ -138,6 +143,12 @@ class Activity {
 class Address {
   Address(this.road, this.area, this.city, this.district, this.state, this.pin);
   final String? road, area, city, district, state, pin;
+  String? get place => placeLine(pin, state);
+}
+
+String? placeLine(String? pin, String? state) {
+  final parts = [if (pin != null) 'PIN code $pin', ?state];
+  return parts.isEmpty ? null : parts.join(' · ');
 }
 
 class Api {

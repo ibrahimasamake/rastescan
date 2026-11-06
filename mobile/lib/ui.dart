@@ -357,6 +357,7 @@ class ReportCard extends StatelessWidget {
               Text(r.hazard, maxLines: 1, overflow: TextOverflow.ellipsis, style: display(23, color: Colors.white, h: 1.05)),
               const SizedBox(height: 3),
               Text('${r.ward ?? r.code} · ${ago(r.createdAt)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              if (r.place != null) Text(r.place!, style: const TextStyle(color: Colors.white70, fontSize: 12)),
               const SizedBox(height: 8),
               Row(children: [
                 Text(statusLabel(r.publicStatus), style: TextStyle(color: col, fontWeight: FontWeight.w800, fontSize: 12)),

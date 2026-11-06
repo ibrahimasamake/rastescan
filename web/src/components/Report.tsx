@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import type { Address } from "../address";
 import { absUrl, api, detectionsOf, type Inspection, type PublicReport, type TimelineEvent, type Urgency } from "../api";
 import { ago, hazardLabel, statusLabel, urgencyLabel } from "../format";
 import { useI18n } from "../i18n";
@@ -7,6 +8,19 @@ import type { Key } from "../i18n/en";
 import { DemoBadge, StatusBadge, UrgencyBadge } from "./Badges";
 import { useAsync } from "./States";
 import { Icon } from "./Icons";
+
+/** "PIN code 560045 · Karnataka", for anywhere a report is listed. Nothing at all until the address is known. */
+export function Place({ address }: { address: Address | null | undefined }) {
+  const { t } = useI18n();
+  if (!address?.pin && !address?.state) return null;
+  return (
+    <span className="place small muted">
+      {address.pin && <>{t("report.pin")} <b className="num">{address.pin}</b></>}
+      {address.pin && address.state && " · "}
+      {address.state}
+    </span>
+  );
+}
 
 /** The photo with the damage boxed, drawn from the model's 0–1000 coordinates. */
 export function PhotoWithBox({ src, result, urgency, alt }: { src: string; result: Inspection; urgency: Urgency; alt: string }) {
@@ -147,6 +161,7 @@ export function ReportCard({ r }: { r: PublicReport }) {
           <span><Icon name="pin" size={13} /> {r.ward?.name ?? r.code}</span>
           <span>{ago(t, r.resolved_at ?? r.created_at)}</span>
         </div>
+        <Place address={r.address} />
         <div className="row">
           <UrgencyBadge urgency={r.urgency} />
           {r.is_demo && <DemoBadge />}

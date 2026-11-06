@@ -1,6 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { officerApi } from "../api";
 import { UrgencyBadge } from "../components/Badges";
+import { Place } from "../components/Report";
 import { Empty, ErrorBox, Skeleton, useAsync } from "../components/States";
 import { hazardLabel } from "../format";
 import { useI18n } from "../i18n";
@@ -53,7 +54,7 @@ function WorkOrderBody() {
                         <td className="nowrap">{s.code}</td>
                         <td>{hazardLabel(t, s.hazard_type)}</td>
                         <td><UrgencyBadge urgency={s.urgency} /></td>
-                        <td>{s.lat !== null ? <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`}>{s.ward?.name ?? ""} {s.lat.toFixed(5)}, {s.lng?.toFixed(5)}</a> : "–"}</td>
+                        <td>{s.lat !== null ? <a href={`https://www.google.com/maps?q=${s.lat},${s.lng}`}>{s.ward?.name ?? ""} {s.lat.toFixed(5)}, {s.lng?.toFixed(5)}</a> : "–"}<Place address={s.address} /></td>
                         <td className="num">{s.leg_m === null ? "–" : t("common.km", { n: num(s.leg_m / 1000, 1) })}</td>
                         <td className="small" lang="en">{s.repair_recommendation}</td>
                         <td>{s.due_at ? date(s.due_at, true) : "–"}</td>

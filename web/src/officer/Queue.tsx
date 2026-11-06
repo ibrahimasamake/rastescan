@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { officerApi, URGENCIES, type Report, type Status } from "../api";
 import { StatusBadge, UrgencyBadge } from "../components/Badges";
+import { Place } from "../components/Report";
 import { Modal } from "../components/Modal";
 import { Empty, ErrorBox, Skeleton, Toast, useAsync, useToast } from "../components/States";
 import { CLOSED, ago, hazardLabel, sla, urgencyLabel } from "../format";
@@ -51,7 +52,7 @@ function QueueTable({ rows, selected, onSelect, checked, setChecked }: {
                 <td className="nowrap"><button className="link-btn" onClick={() => onSelect(r.code)} aria-pressed={selected === r.code}>{r.code}</button></td>
                 <td>{hazardLabel(t, r.hazard_type)}</td>
                 <td><UrgencyBadge urgency={r.urgency} /></td>
-                <td>{r.ward?.name ?? "–"}</td>
+                <td>{r.ward?.name ?? "–"}<Place address={r.address} /></td>
                 <td>{ago(t, r.created_at)}</td>
                 <td className={clock?.overdue ? "overdue-text" : ""}>{clock?.text ?? "–"}</td>
                 <td>{r.assignee ?? "–"}</td>

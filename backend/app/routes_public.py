@@ -182,7 +182,7 @@ def recently_resolved(request: Request, limit: int = Query(8, ge=1, le=30), ctx:
     return cached_json(request, [svc.public_item(ctx, r) for r in rows], max_age=15)
 
 
-CSV_FIELDS = ["code", "created_at", "ward_code", "ward_name", "hazard_type", "severity", "urgency", "public_status",
+CSV_FIELDS = ["code", "created_at", "ward_code", "ward_name", "pin_code", "state", "hazard_type", "severity", "urgency", "public_status",
               "reported_count", "lat", "lng", "due_at", "resolved_at", "overdue", "assignee", "is_demo", "url"]
 
 
@@ -198,6 +198,7 @@ def export_csv(params: ListParams = Depends(), ctx: Ctx = Depends(get_ctx)):
         out.writerow({
             **{k: item.get(k) for k in CSV_FIELDS if k in item},
             "ward_code": (item["ward"] or {}).get("code"), "ward_name": (item["ward"] or {}).get("name"),
+            "pin_code": (item["address"] or {}).get("pin"), "state": (item["address"] or {}).get("state"),
             "url": f"{base}/#/r/{item['code']}" if base else f"#/r/{item['code']}",
         })
     return Response(buf.getvalue(), media_type="text/csv", headers={

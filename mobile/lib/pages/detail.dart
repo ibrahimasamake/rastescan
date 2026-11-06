@@ -78,6 +78,7 @@ class _BodyState extends State<_Body> {
             ]),
             const SizedBox(height: 6),
             Text('${r.ward ?? 'Location pending'} · reported ${ago(r.createdAt)}${r.isDemo ? ' · demo data' : ''}', style: const TextStyle(color: Color(0xFFB9BDC4))),
+            if (r.place != null) Text(r.place!, style: const TextStyle(color: Color(0xFFB9BDC4))),
             const SizedBox(height: 14),
             Wrap(spacing: 8, runSpacing: 8, children: [
               UrgencyPill(r.urgency),

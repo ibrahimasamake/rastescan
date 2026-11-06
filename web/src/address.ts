@@ -1,5 +1,6 @@
 /** PIN code, state, district and road for a report's pin. The server looks it up once per location and keeps the answer, so this
  *  is the nearest known address to the pin. A missing answer just leaves those rows out. */
+import { useEffect, useState } from "react";
 import { absUrl } from "./api";
 
 export interface Address {
@@ -24,4 +25,17 @@ export function lookupAddress(code: string): Promise<Address | null> {
     known.set(code, found);
   }
   return found;
+}
+
+/** The address that came with the report, or, for a report too new to have one yet, the answer to asking the server for it. */
+export function useAddress(code: string, withReport: Address | null | undefined): Address | null {
+  const has = !!(withReport?.pin || withReport?.state);
+  const [asked, setAsked] = useState<Address | null>(null);
+  useEffect(() => {
+    if (has) return;
+    let live = true;
+    lookupAddress(code).then((a) => { if (live) setAsked(a); });
+    return () => { live = false; };
+  }, [code, has]);
+  return has ? withReport ?? null : asked;
 }

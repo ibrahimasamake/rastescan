@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { StatusBadge, UrgencyBadge } from "../components/Badges";
+import { Place } from "../components/Report";
 import { PageHead } from "../components/Layout";
 import { Empty, ErrorBox, Skeleton, useAsync } from "../components/States";
 import { ago, deviceId, hazardLabel, statusLabel } from "../format";
@@ -53,6 +54,7 @@ export default function MyReports() {
                   {published && <UrgencyBadge urgency={r.urgency} />}
                 </div>
                 <p className="small muted">{ago(t, r.created_at)}{r.merged_into ? ` · ${t("report.mergedInto", { code: r.merged_into })}` : ""}</p>
+                <Place address={r.address} />
                 {changed && <p className="small" style={{ color: "var(--high)", fontWeight: 700 }}>{t("mine.changed")}</p>}
               </li>
             );
