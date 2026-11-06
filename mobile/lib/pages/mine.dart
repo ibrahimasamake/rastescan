@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../ui.dart';
 import 'detail.dart';
+import 'officer.dart';
 
 /// The reports sent from this phone.
 class MinePage extends StatefulWidget {
@@ -20,7 +21,13 @@ class MinePageState extends State<MinePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My reports')),
+      appBar: AppBar(title: const Text('My reports'), actions: [
+        TextButton.icon(
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OfficerGate())),
+          icon: const Icon(Icons.badge_outlined, color: Colors.white70, size: 18),
+          label: const Text('Officer', style: TextStyle(color: Colors.white70)),
+        ),
+      ]),
       body: FutureBuilder<List<Report>>(
         future: future,
         builder: (_, s) {
