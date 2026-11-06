@@ -30,11 +30,12 @@ interface Layout { cw: number; ch: number; cols: number; rows: number; tw: numbe
 interface Live { wrap: HTMLElement; tiles: HTMLElement[]; origin: { x: number; y: number } }
 
 function layoutOf(el: HTMLElement): Layout {
-  const r = el.getBoundingClientRect();
-  const size = r.width > 700 ? 120 : 84;
-  const cols = Math.max(3, Math.round(r.width / size));
-  const rows = Math.max(3, Math.round(r.height / size));
-  return { cw: r.width, ch: r.height, cols, rows, tw: r.width / cols, th: r.height / rows };
+  // offset sizes ignore the card's entrance scale and pointer tilt, which getBoundingClientRect would include
+  const w = el.offsetWidth, h = el.offsetHeight;
+  const size = w > 900 ? 120 : w > 520 ? 100 : 76;
+  const cols = Math.max(3, Math.round(w / size));
+  const rows = Math.max(3, Math.round(h / size));
+  return { cw: w, ch: h, cols, rows, tw: w / cols, th: h / rows };
 }
 
 /** Where the photo sits when it covers the stage (object-position 50% 62%, road damage is usually low in the frame). */
@@ -149,7 +150,8 @@ export default function HeroReel() {
     if (reduced || !root.current) return;
     const ctx = gsap.context(() => {
       gsap.from(".reel-word > span", { yPercent: 115, rotateX: -80, opacity: 0, duration: 0.9, stagger: 0.07, ease: "back.out(1.6)", delay: 0.2 });
-      gsap.from(".reel-kicker, .reel-lead, .reel-ctas", { y: 24, opacity: 0, duration: 0.8, stagger: 0.12, delay: 0.7, ease: "power3.out" });
+      gsap.from(".reel-kicker, .reel-lead, .reel-ctas, .reel-hint", { y: 24, opacity: 0, duration: 0.8, stagger: 0.12, delay: 0.6, ease: "power3.out" });
+      gsap.from(".reel-stage", { opacity: 0, scale: 1.08, duration: 1.6, ease: "power2.out" });
       gsap.from(".reel-stats .stat", { y: 30, opacity: 0, duration: 0.7, stagger: 0.1, delay: 1.0, ease: "power3.out" });
     }, root);
     return () => ctx.revert();
@@ -233,10 +235,10 @@ export default function HeroReel() {
           const c = coverOf(s.img, g);
           const box = document.createElement("div");
           box.className = `reel-box ${s.boxClass}`;
-          Object.assign(box.style, {
-            left: `${c.ox + (b.xmin / 1000) * c.dw}px`, top: `${c.oy + (b.ymin / 1000) * c.dh}px`,
-            width: `${((b.xmax - b.xmin) / 1000) * c.dw}px`, height: `${((b.ymax - b.ymin) / 1000) * c.dh}px`,
-          });
+          // keep the box inside the card, with room above it for the label
+          const x0 = Math.max(8, c.ox + (b.xmin / 1000) * c.dw), x1 = Math.min(g.cw - 8, c.ox + (b.xmax / 1000) * c.dw);
+          const y0 = Math.max(34, c.oy + (b.ymin / 1000) * c.dh), y1 = Math.min(g.ch - 84, c.oy + (b.ymax / 1000) * c.dh);
+          Object.assign(box.style, { left: `${x0}px`, top: `${y0}px`, width: `${Math.max(24, x1 - x0)}px`, height: `${Math.max(24, y1 - y0)}px` });
           const chip = document.createElement("span");
           chip.textContent = s.chip;
           box.appendChild(chip);
@@ -304,17 +306,24 @@ export default function HeroReel() {
         {Array.from({ length: 28 }, (_, k) => <i key={k} className="reel-spark" />)}
       </div>
       <div className="reel-shade" aria-hidden="true" />
+      <div className="reel-caption" ref={cap} aria-hidden="true" />
 
-      <div className="wrap reel-content">
-        <p className="reel-kicker"><Icon name="alert" size={16} /> {t("hero.kicker")}</p>
-        <h1 className="reel-title">{words.map((w, k) => <Fragment key={k}><span className="reel-word"><span>{w}</span></span>{" "}</Fragment>)}</h1>
+      <div className="wrap reel-copy">
+        <p className="reel-kicker"><i className="reel-live" aria-hidden="true" /> {t("hero.kicker")}</p>
+        <h1 className="reel-title">
+          {words.map((w, k) => (
+            <Fragment key={k}><span className={`reel-word${k >= words.length - 2 ? " grad" : ""}`}><span>{w}</span></span>{" "}</Fragment>
+          ))}
+        </h1>
         <p className="lead reel-lead">{t("home.lead")}</p>
         <div className="btn-row reel-ctas">
           <Link to="/report" className="btn accent big"><Icon name="camera" size={22} /> {t("home.cta")}</Link>
           <Link to="/map?present=1" className="btn outline big reel-ghost"><Icon name="map" size={20} /> {t("hero.watch")}</Link>
         </div>
         <p className="small reel-hint">{t("home.ctaHint")}</p>
+      </div>
 
+      <div className="wrap reel-bottom">
         <div className="stats reel-stats" aria-live="polite">
           <div className="stat"><b data-count={s?.reported_today ?? 0}>{s ? num(s.reported_today) : "–"}</b><span>{t("stat.today")}</span></div>
           <div className="stat"><b data-count={s?.open_now ?? 0}>{s ? num(s.open_now) : "–"}</b><span>{t("stat.open")}</span></div>
@@ -322,8 +331,6 @@ export default function HeroReel() {
           <div className="stat"><b data-count={s?.resolved_this_month ?? 0}>{s ? num(s.resolved_this_month) : "–"}</b><span>{t("stat.resolvedMonth")}</span></div>
         </div>
       </div>
-
-      <div className="reel-caption" ref={cap} aria-hidden="true" />
       <div className="reel-pips" ref={pips} aria-hidden="true">
         {scenes.map((sc) => <span key={sc.key}><i /></span>)}
       </div>
