@@ -12,7 +12,7 @@ city works one ranked repair queue, and anyone can check every step, from the re
 [Run it on your laptop](#run-it-on-your-laptop) ·
 [What is not proved yet](#where-it-stands)
 
-**Best social innovative project** at the TechKubik National Level Project Expo 2026, HKBK College of Engineering, Bengaluru,
+**Best Socially Relevant Project** at the TechKubik National Level Project Expo 2026, HKBK College of Engineering, Bengaluru,
 with a cash prize. Built by Aaditi Varsha, Chaitanya, Ibrahima and Vishnu, MCA students at CMR University.
 
 ## Why it exists
@@ -264,7 +264,7 @@ The first commit is dated 4 November 2026, the day before the expo opened. Three
 The expo's rule was "Only working model will be allowed", so the demo is the real system: send a road photo, watch it get
 analysed, open the officer queue, assign the job, fix it, and see the public page, map and scoreboard change.
 
-It won best social innovative project, along with a cash prize.
+It won the Best Socially Relevant Project award, along with a cash prize.
 
 ![The four team members holding certificates in front of the National Level Project Expo banner](docs/images/award.jpg)
 
