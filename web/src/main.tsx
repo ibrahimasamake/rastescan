@@ -1,6 +1,7 @@
 import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import IntroVideo from "./components/IntroVideo";
 import { Layout } from "./components/Layout";
 import { Skeleton } from "./components/States";
 import { I18nProvider } from "./i18n";
@@ -45,6 +46,7 @@ createRoot(document.getElementById("root")!).render(
     <I18nProvider>
       <PortalProvider>
         <HashRouter>
+          <IntroVideo />
           <Layout>
             <Suspense fallback={<Loading />}>
               <Routes>

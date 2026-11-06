@@ -416,6 +416,8 @@ export const en = {
   "officer.notAllowed": "Only an administrator can manage officers.",
   // impact, live feed, cost
   "about.dataCredit": "Demo reports use road photos from the open RDD2022 dataset (Arya, Maeda, Ghosh, Toshniwal and Sekimoto, 2024, CC BY 4.0). Places and dates in the demo are made up and every demo report is marked as such.",
+  "intro.skip": "Skip intro",
+  "intro.label": "RasteScan introduction film",
   "an.title": "The AI is inspecting your photo",
   "an.done": "Inspection complete",
   "an.s1": "Blurring faces and number plates",

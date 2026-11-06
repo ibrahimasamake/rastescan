@@ -502,6 +502,14 @@ input, select, textarea { border-radius: 12px; }
 .badge, .chip, .pill { border-radius: 999px; }
 
 
+/* Opening film, shown once per visit over the Home page */
+.intro { position: fixed; inset: 0; z-index: 6000; background: #000; transition: opacity .5s ease; }
+.intro.leaving { opacity: 0; pointer-events: none; }
+.intro-video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.intro-skip { position: absolute; top: max(16px, env(safe-area-inset-top)); right: 16px; min-height: 44px; padding: 8px 18px; border-radius: 999px; border: 1px solid rgba(255,255,255,.45); background: rgba(0,0,0,.45); color: #fff; font-weight: 700; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.intro-skip:hover { background: rgba(0,0,0,.7); border-color: #fff; }
+@media (max-aspect-ratio: 1/1) { .intro-video { object-fit: contain; } }
+
 /* Analysis scene: shown while the AI inspects the citizen's photo */
 .an { position: fixed; inset: 0; z-index: 5000; display: flex; align-items: center; justify-content: center; padding: 20px; color: #fff; overflow: auto; }
 .an-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 20%, #17407a 0%, #0b2545 45%, #050f1f 100%); }
