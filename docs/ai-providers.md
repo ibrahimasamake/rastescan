@@ -1,0 +1,75 @@
+# Choose your AI provider
+
+The inspector sends each (blurred) photo with `prompts/inspection-prompt.md` to a vision model and gets JSON back.
+The server validates it, recomputes urgency from the severity score, and sends unsure answers to a person.
+Pick the provider with `AI_MODE`.
+
+| `AI_MODE` | Cost | Needs | Good for |
+|---|---|---|---|
+| `bedrock` | Pay per call (cents per photo with Nova Lite/Pro) | AWS account with Bedrock access; the EC2 role does auth | Production on AWS |
+| `groq` | Free tier with rate limits | `GROQ_API_KEY` from console.groq.com | Demos, the expo, low volume |
+| `azure` | Pays from Azure credit (Azure for Students) | A vision model deployed in Azure, e.g. `gpt-4.1-mini`; endpoint, key, deployment name | Backup to Groq, higher limits |
+| `fake` | Free | Nothing | UI work and tests only; the portal shows a "Test mode" banner |
+
+## Bedrock (Amazon Nova)
+```bash
+AI_MODE=bedrock AWS_REGION=ap-south-1 BEDROCK_MODEL_ID=apac.amazon.nova-pro-v1:0 make api
+```
+If your AWS Organization blocks a region, use one it allows (for example `eu-north-1` with `eu.amazon.nova-pro-v1:0`)
+and run one real call first; see `docs/aws-setup.md`. Deploy: `RASTESCAN_AI_MODE=bedrock make deploy` (the default).
+
+## Groq (free key)
+```bash
+export GROQ_API_KEY=gsk_...
+AI_MODE=groq make api
+```
+Default model `qwen/qwen3.8-27b`. If Groq has retired it, pick a current vision model on
+console.groq.com and set `GROQ_MODEL=...`. Deploy: `RASTESCAN_AI_MODE=groq GROQ_API_KEY=gsk_... make deploy`.
+
+## Azure (student credit)
+Create an Azure OpenAI / Foundry resource in a region your subscription allows, deploy `gpt-4.1-mini`, then in your terminal:
+```bash
+export AZURE_ENDPOINT=https://YOUR-RESOURCE.openai.azure.com/openai/v1
+export AZURE_KEY=...                 # Keys and Endpoint page of the resource; never commit it
+export AZURE_DEPLOYMENT=your-deployment-name
+AI_MODE=azure make api
+```
+Deploy: `RASTESCAN_AI_MODE=azure AZURE_ENDPOINT=... AZURE_KEY=... AZURE_DEPLOYMENT=... make deploy`.
+
+## How a photo is analysed (all real providers)
+1. **Pixels first.** `backend/app/pixels.py` finds the road surface and the patches on it that differ from the asphalt around
+   them (dark pits, light water-filled holes). Plain computer vision: no model, no network, a few milliseconds.
+2. **The model gets those patches as hints**, so it looks in the right places, and a strict prompt that says: road surface
+   only, never vehicles or buildings, tight non-overlapping boxes, near road first.
+3. **Optional zoomed regions** (`SCAN_TILES=2`, on by default for Azure): the model also sees four overlapping zoomed views,
+   because models place boxes far better on a small region and small far potholes only show up zoomed in.
+4. **The answer is checked against the pixels.** Boxes on cars, buildings or sky are dropped. A rough pothole box is replaced
+   by the real damaged patches inside it (the model's label and severity are kept). Huge, tiny and repeated boxes are removed.
+5. **Missed damage is added.** If the AI confirmed damage but left strong damaged patches unboxed, those patches are added as
+   unsure potholes (confidence 0.5, marked as found by pixel analysis). `PIXEL_ADD=0` turns that off.
+It is approximate: a grey or white car on the road can look like road to the pixels. The model still decides what is a
+defect. Turn it off with `PIXEL_CHECK=0` and compare in the admin **AI models** page.
+
+## Rate limits and failures
+- The same photo is never inspected twice: results are cached by image hash.
+- On HTTP 429 (or Bedrock throttling) the server waits two seconds and retries once.
+- If the provider still refuses, the report is saved as **Waiting for a check** and the citizen is told
+  "The AI inspector is busy right now… a ward engineer will check the photo". Nothing is lost and nothing
+  unchecked is published.
+- An answer that is not valid JSON for the schema is retried once with a reminder; then the citizen is asked to try again.
+
+## Compare providers with evidence
+1. Put 20–30 photos of real road damage, and a few good roads, in `test-photos/`.
+2. Fill `test-photos/labels.csv`:
+   ```
+   file,hazard_type,urgency,severity
+   ihs-gate-pothole.jpg,Pothole,HIGH,7.5
+   service-road.jpg,None,LOW,1
+   ```
+3. Run:
+   ```bash
+   PROVIDERS=groq,bedrock PAUSE=2 make evaluate
+   ```
+It prints one table per provider: hazard accuracy, urgency accuracy, mean absolute severity error, JSON failure rate,
+rate-limited share and median seconds per photo, and writes `test-photos/results-<provider>.csv` with every answer.
+Choose the cheapest provider whose accuracy is good enough; urgency errors on open manholes matter most.

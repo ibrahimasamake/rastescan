@@ -1,0 +1,891 @@
+{
+ "type": "FeatureCollection",
+ "name": "rastescan-sample-wards-india",
+ "description": "SAMPLE ONLY. The six Bengaluru demo wards plus one rough box (about 20 km across) around each of 20 other Indian cities, so demo reports from across India land in a named place. Not official boundaries.",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "W01",
+    "name": "Hebbal"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.58,
+       13.04
+      ],
+      [
+       77.6134,
+       13.04
+      ],
+      [
+       77.6134,
+       13.08
+      ],
+      [
+       77.58,
+       13.08
+      ],
+      [
+       77.58,
+       13.04
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "W02",
+    "name": "Nagawara"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.6134,
+       13.04
+      ],
+      [
+       77.6467,
+       13.04
+      ],
+      [
+       77.6467,
+       13.08
+      ],
+      [
+       77.6134,
+       13.08
+      ],
+      [
+       77.6134,
+       13.04
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "W03",
+    "name": "Thanisandra"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.6467,
+       13.04
+      ],
+      [
+       77.68,
+       13.04
+      ],
+      [
+       77.68,
+       13.08
+      ],
+      [
+       77.6467,
+       13.08
+      ],
+      [
+       77.6467,
+       13.04
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "W04",
+    "name": "Kavalbyrasandra"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.58,
+       13.0
+      ],
+      [
+       77.6134,
+       13.0
+      ],
+      [
+       77.6134,
+       13.04
+      ],
+      [
+       77.58,
+       13.04
+      ],
+      [
+       77.58,
+       13.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "W05",
+    "name": "HBR Layout"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.6134,
+       13.0
+      ],
+      [
+       77.6467,
+       13.0
+      ],
+      [
+       77.6467,
+       13.04
+      ],
+      [
+       77.6134,
+       13.04
+      ],
+      [
+       77.6134,
+       13.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "W06",
+    "name": "Kalyan Nagar"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.6467,
+       13.0
+      ],
+      [
+       77.68,
+       13.0
+      ],
+      [
+       77.68,
+       13.04
+      ],
+      [
+       77.6467,
+       13.04
+      ],
+      [
+       77.6467,
+       13.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-MUM",
+    "name": "Mumbai"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       72.7877,
+       18.986
+      ],
+      [
+       72.9677,
+       18.986
+      ],
+      [
+       72.9677,
+       19.166
+      ],
+      [
+       72.7877,
+       19.166
+      ],
+      [
+       72.7877,
+       18.986
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-DEL",
+    "name": "Delhi"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.119,
+       28.5239
+      ],
+      [
+       77.299,
+       28.5239
+      ],
+      [
+       77.299,
+       28.7039
+      ],
+      [
+       77.119,
+       28.7039
+      ],
+      [
+       77.119,
+       28.5239
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-HYD",
+    "name": "Hyderabad"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       78.3967,
+       17.295
+      ],
+      [
+       78.5767,
+       17.295
+      ],
+      [
+       78.5767,
+       17.475
+      ],
+      [
+       78.3967,
+       17.475
+      ],
+      [
+       78.3967,
+       17.295
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-MAA",
+    "name": "Chennai"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       80.1807,
+       12.9927
+      ],
+      [
+       80.3607,
+       12.9927
+      ],
+      [
+       80.3607,
+       13.1727
+      ],
+      [
+       80.1807,
+       13.1727
+      ],
+      [
+       80.1807,
+       12.9927
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-CCU",
+    "name": "Kolkata"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       88.2739,
+       22.4826
+      ],
+      [
+       88.4539,
+       22.4826
+      ],
+      [
+       88.4539,
+       22.6626
+      ],
+      [
+       88.2739,
+       22.6626
+      ],
+      [
+       88.2739,
+       22.4826
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-PNQ",
+    "name": "Pune"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       73.7667,
+       18.4304
+      ],
+      [
+       73.9467,
+       18.4304
+      ],
+      [
+       73.9467,
+       18.6104
+      ],
+      [
+       73.7667,
+       18.6104
+      ],
+      [
+       73.7667,
+       18.4304
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-AMD",
+    "name": "Ahmedabad"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       72.4814,
+       22.9325
+      ],
+      [
+       72.6614,
+       22.9325
+      ],
+      [
+       72.6614,
+       23.1125
+      ],
+      [
+       72.4814,
+       23.1125
+      ],
+      [
+       72.4814,
+       22.9325
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-JAI",
+    "name": "Jaipur"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       75.6973,
+       26.8224
+      ],
+      [
+       75.8773,
+       26.8224
+      ],
+      [
+       75.8773,
+       27.0024
+      ],
+      [
+       75.6973,
+       27.0024
+      ],
+      [
+       75.6973,
+       26.8224
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-LKO",
+    "name": "Lucknow"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       80.8562,
+       26.7567
+      ],
+      [
+       81.0362,
+       26.7567
+      ],
+      [
+       81.0362,
+       26.9367
+      ],
+      [
+       80.8562,
+       26.9367
+      ],
+      [
+       80.8562,
+       26.7567
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-NAG",
+    "name": "Nagpur"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       78.9982,
+       21.0558
+      ],
+      [
+       79.1782,
+       21.0558
+      ],
+      [
+       79.1782,
+       21.2358
+      ],
+      [
+       78.9982,
+       21.2358
+      ],
+      [
+       78.9982,
+       21.0558
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-IDR",
+    "name": "Indore"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       75.7677,
+       22.6296
+      ],
+      [
+       75.9477,
+       22.6296
+      ],
+      [
+       75.9477,
+       22.8096
+      ],
+      [
+       75.7677,
+       22.8096
+      ],
+      [
+       75.7677,
+       22.6296
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-BHO",
+    "name": "Bhopal"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.3226,
+       23.1699
+      ],
+      [
+       77.5026,
+       23.1699
+      ],
+      [
+       77.5026,
+       23.3499
+      ],
+      [
+       77.3226,
+       23.3499
+      ],
+      [
+       77.3226,
+       23.1699
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-PAT",
+    "name": "Patna"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       85.0476,
+       25.5041
+      ],
+      [
+       85.2276,
+       25.5041
+      ],
+      [
+       85.2276,
+       25.6841
+      ],
+      [
+       85.0476,
+       25.6841
+      ],
+      [
+       85.0476,
+       25.5041
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-STV",
+    "name": "Surat"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       72.7411,
+       21.0802
+      ],
+      [
+       72.9211,
+       21.0802
+      ],
+      [
+       72.9211,
+       21.2602
+      ],
+      [
+       72.7411,
+       21.2602
+      ],
+      [
+       72.7411,
+       21.0802
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-VTZ",
+    "name": "Visakhapatnam"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       83.1285,
+       17.5968
+      ],
+      [
+       83.3085,
+       17.5968
+      ],
+      [
+       83.3085,
+       17.7768
+      ],
+      [
+       83.1285,
+       17.7768
+      ],
+      [
+       83.1285,
+       17.5968
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-COK",
+    "name": "Kochi"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       76.1773,
+       9.8412
+      ],
+      [
+       76.3573,
+       9.8412
+      ],
+      [
+       76.3573,
+       10.0212
+      ],
+      [
+       76.1773,
+       10.0212
+      ],
+      [
+       76.1773,
+       9.8412
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-GAU",
+    "name": "Guwahati"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       91.6462,
+       26.0545
+      ],
+      [
+       91.8262,
+       26.0545
+      ],
+      [
+       91.8262,
+       26.2345
+      ],
+      [
+       91.6462,
+       26.2345
+      ],
+      [
+       91.6462,
+       26.0545
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-BBI",
+    "name": "Bhubaneswar"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       85.7345,
+       20.2061
+      ],
+      [
+       85.9145,
+       20.2061
+      ],
+      [
+       85.9145,
+       20.3861
+      ],
+      [
+       85.7345,
+       20.3861
+      ],
+      [
+       85.7345,
+       20.2061
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-IXC",
+    "name": "Chandigarh"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       76.6894,
+       30.6433
+      ],
+      [
+       76.8694,
+       30.6433
+      ],
+      [
+       76.8694,
+       30.8233
+      ],
+      [
+       76.6894,
+       30.8233
+      ],
+      [
+       76.6894,
+       30.6433
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "IN-CJB",
+    "name": "Coimbatore"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       76.8658,
+       10.9268
+      ],
+      [
+       77.0458,
+       10.9268
+      ],
+      [
+       77.0458,
+       11.1068
+      ],
+      [
+       76.8658,
+       11.1068
+      ],
+      [
+       76.8658,
+       10.9268
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

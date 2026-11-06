@@ -1,0 +1,10 @@
+# Terraform writes inventory/hosts.ini for you. This is what it looks like.
+[app]
+203.0.113.10 ansible_user=ubuntu
+
+[app:vars]
+aws_region=ap-south-1
+bedrock_region=ap-south-1
+s3_bucket=rastescan-photos-abc123
+bedrock_model_id=apac.amazon.nova-pro-v1:0
+public_url=https://d1234abcd.cloudfront.net

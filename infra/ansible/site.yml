@@ -1,0 +1,180 @@
+# Configures the server Terraform created and deploys the app from your local checkout.
+# Run from infra/ansible:  ansible-playbook site.yml
+- name: Deploy RasteScan
+  hosts: app
+  become: true
+  gather_facts: true
+  strategy: linear
+
+  pre_tasks:
+    - name: Check required settings
+      ansible.builtin.assert:
+        that:
+          - (admin_email | length > 0 and admin_password | length >= 10) or dashboard_pin | length >= 4
+          - ai_mode in ['bedrock', 'groq', 'azure']
+          - ai_mode != 'groq' or groq_api_key | length > 0
+          - ai_mode != 'azure' or (azure_endpoint | length > 0 and azure_key | length > 0 and azure_deployment | length > 0)
+          - s3_bucket is defined and s3_bucket | length > 0
+          - bedrock_model_id is defined
+        fail_msg: >-
+          Set RASTESCAN_ADMIN_EMAIL and RASTESCAN_ADMIN_PASSWORD (10+ characters) or RASTESCAN_DASHBOARD_PIN,
+          pick RASTESCAN_AI_MODE (bedrock, groq or azure; groq also needs GROQ_API_KEY), and run terraform apply
+          so inventory/hosts.ini has the bucket and model.
+        quiet: true
+
+    - name: Build the web app on this computer  # noqa: run-once[task]
+      delegate_to: localhost
+      become: false
+      run_once: true
+      block:
+        - name: Install web dependencies
+          ansible.builtin.command: npm ci --no-audit --no-fund
+          args:
+            chdir: "{{ repo_root }}/web"
+          changed_when: false
+        - name: Build web app
+          ansible.builtin.command: npx vite build
+          args:
+            chdir: "{{ repo_root }}/web"
+          changed_when: false
+
+  tasks:
+    - name: Install system packages
+      ansible.builtin.apt:
+        name: [python3-venv, python3-pip, rsync, libgl1, libglib2.0-0]
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Create app user
+      ansible.builtin.user:
+        name: "{{ app_user }}"
+        system: true
+        shell: /usr/sbin/nologin
+        home: "{{ app_dir }}"
+        create_home: false
+
+    - name: Create folders
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        mode: "0755"
+      loop:
+        - { path: "{{ app_dir }}", owner: root }
+        - { path: "{{ app_dir }}/web", owner: root }
+        - { path: "{{ data_dir }}", owner: "{{ app_user }}" }
+
+    - name: Copy backend code
+      ansible.posix.synchronize:
+        src: "{{ repo_root }}/backend/"
+        dest: "{{ app_dir }}/backend/"
+        delete: true
+        owner: false
+        group: false
+        rsync_opts: ["--exclude=.venv", "--exclude=data", "--exclude=__pycache__", "--exclude=.pytest_cache", "--exclude=tests"]
+      notify: Restart app
+
+    - name: Copy prompt
+      ansible.posix.synchronize:
+        src: "{{ repo_root }}/prompts/"
+        dest: "{{ app_dir }}/prompts/"
+        delete: true
+        owner: false
+        group: false
+      notify: Restart app
+
+    - name: Copy helper scripts (demo seed, evaluation)
+      ansible.posix.synchronize:
+        src: "{{ repo_root }}/scripts/"
+        dest: "{{ app_dir }}/scripts/"
+        delete: true
+        owner: false
+        group: false
+
+    - name: Copy ward boundaries
+      ansible.posix.synchronize:
+        src: "{{ repo_root }}/data/"
+        dest: "{{ app_dir }}/data/"
+        delete: true
+        owner: false
+        group: false
+      notify: Restart app
+
+    - name: Copy built web app
+      ansible.posix.synchronize:
+        src: "{{ repo_root }}/web/dist/"
+        dest: "{{ app_dir }}/web/dist/"
+        delete: true
+        owner: false
+        group: false
+
+    - name: Install Python dependencies
+      ansible.builtin.pip:
+        requirements: "{{ app_dir }}/backend/requirements.txt"
+        virtualenv: "{{ app_dir }}/backend/.venv"
+        virtualenv_command: python3 -m venv
+      notify: Restart app
+
+    - name: Write settings
+      ansible.builtin.template:
+        src: rastescan.env.j2
+        dest: /etc/rastescan.env
+        owner: root
+        group: "{{ app_user }}"
+        mode: "0640"
+      notify: Restart app
+
+    - name: Install service
+      ansible.builtin.template:
+        src: rastescan.service.j2
+        dest: /etc/systemd/system/rastescan.service
+        mode: "0644"
+      notify: Restart app
+
+    - name: Enable and start service
+      ansible.builtin.systemd_service:
+        name: rastescan
+        enabled: true
+        state: started
+        daemon_reload: true
+
+    - name: Apply pending restarts
+      ansible.builtin.meta: flush_handlers
+
+    - name: Wait for the API on the server
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8000/api/health
+        return_content: true
+      register: local_health
+      retries: 15
+      delay: 2
+      until: local_health.status == 200
+
+    - name: Check it is using the chosen AI provider, not test mode
+      ansible.builtin.assert:
+        that: local_health.json.ai_mode == ai_mode
+        fail_msg: "The app is running in {{ local_health.json.ai_mode }} mode, expected {{ ai_mode }}."
+        quiet: true
+
+    - name: Wait for the public HTTPS address (CloudFront can take 10-15 minutes the first time)  # noqa: run-once[task]
+      delegate_to: localhost
+      become: false
+      run_once: true
+      ansible.builtin.uri:
+        url: "{{ public_url }}/api/health"
+      register: public_health
+      retries: 45
+      delay: 20
+      until: public_health.status == 200
+
+    - name: Done  # noqa: run-once[task]
+      run_once: true
+      ansible.builtin.debug:
+        msg: "RasteScan is live at {{ public_url }}  (dashboard: {{ public_url }}/#/dashboard)"
+
+  handlers:
+    - name: Restart app
+      ansible.builtin.systemd_service:
+        name: rastescan
+        state: restarted
+        daemon_reload: true

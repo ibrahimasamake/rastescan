@@ -207,7 +207,7 @@ ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;f
   <div class="sec-head"><div class="eyebrow">Architecture</div><h2>System design</h2>
   <p class="muted">The AI is one replaceable box. Everything around it is plain, testable code, which is what keeps the demo reliable.</p></div>
   <div class="scroll">
-  <svg class="arch" viewBox="0 0 980 400" role="img" aria-label="Architecture: citizen app and authority dashboard talk to a FastAPI backend, which calls the vision model, a validator, and a SQLite database with an image store; an optional local YOLO model is the offline fallback.">
+  <svg class="arch" viewBox="0 0 980 400" role="img" aria-label="Architecture: citizen app and authority dashboard talk to a FastAPI backend, which calls the vision model, a validator, and a SQLite database with an image store.">
     <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker></defs>
     <rect class="lane" x="10" y="10" width="200" height="380"/>
     <rect class="lane" x="250" y="10" width="220" height="380"/>
@@ -248,11 +248,6 @@ ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;f
     <text class="sm-ai" x="540" y="146">Temperature 0</text>
     <text class="sm-ai" x="540" y="164">One retry on bad JSON</text>
 
-    <rect class="box" x="526" y="230" width="208" height="106" stroke-dasharray="6 4"/>
-    <text x="540" y="258" font-weight="600">Offline fallback</text>
-    <text class="sm" x="540" y="278">YOLOv8n trained on RDD2022</text>
-    <text class="sm" x="540" y="296">Boxes + class, runs on laptop</text>
-    <text class="sm" x="540" y="314">Rule table fills severity</text>
 
     <rect class="box" x="806" y="60" width="148" height="100"/>
     <text x="820" y="88" font-weight="600">SQLite</text>
@@ -389,7 +384,6 @@ ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;f
       <tr><td>Backend</td><td>Python FastAPI + Pydantic</td><td>Pydantic models mirror the JSON schema, so validation is a few lines</td></tr>
       <tr><td>AI in the app</td><td>Amazon Nova on Bedrock (Nova Pro; compare Nova Lite on your test set)</td><td>Reads photos and returns the JSON; Amazon's own model, billed to the same AWS account and credit</td></tr>
       <tr><td>Dev tooling</td><td>Claude Code</td><td>Used by the team to write the code; not part of the running app</td></tr>
-      <tr><td>Offline model</td><td>YOLOv8n fine-tuned on RDD2022</td><td>Public road-damage dataset that includes Indian roads; runs on CPU</td></tr>
       <tr><td>Hosting</td><td>One EC2 instance behind CloudFront, photos in S3</td><td>Free HTTPS link, which phone browsers need for camera and GPS</td></tr>
       <tr><td>Database</td><td>SQLite on the EC2 disk</td><td>Zero setup and no monthly database bill; PostGIS when it scales</td></tr>
       <tr><td>Privacy</td><td>OpenCV face and plate blur</td><td>Citizen photos contain people and vehicles</td></tr>
@@ -467,7 +461,6 @@ ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;f
     <li><div><b>Dashboard queue</b><p>Sorted list with severity chips and status buttons.</p></div><span class="tag must">Must</span></li>
     <li><div><b>Map and duplicate merge</b><p>Leaflet pins; merge reports within 15 m of the same type.</p></div><span class="tag">Should</span></li>
     <li><div><b>Evaluation sheet</b><p>Hand-label the 30 photos, compare with model output, print the table for the stall.</p></div><span class="tag">Should</span></li>
-    <li><div><b>Offline YOLO fallback</b><p>Train YOLOv8n on RDD2022 and switch to it when there is no network.</p></div><span class="tag">Stretch</span></li>
     <li><div><b>After-photo verification</b><p>Re-inspect the repaired spot; close the ticket only if the model returns "None" or LOW.</p></div><span class="tag">Stretch</span></li>
   </ol>
 </section>
@@ -475,7 +468,7 @@ ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;f
 <section>
   <div class="sec-head"><div class="eyebrow">Team</div><h2>Roles for four people</h2></div>
   <div class="cols2" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-    <div class="panel"><h3>AI lead</h3><p>Prompt, validator, test set of 30 labelled photos, evaluation table, optional YOLO model.</p></div>
+    <div class="panel"><h3>AI lead</h3><p>Prompt, validator, test set of 30 labelled photos, evaluation table.</p></div>
     <div class="panel"><h3>Backend</h3><p>FastAPI routes, image prep and blur, SQLite, dedupe and priority score, result cache.</p></div>
     <div class="panel"><h3>Frontend</h3><p>Citizen screen, dashboard queue, map, box overlay, phone-friendly layout.</p></div>
     <div class="panel"><h3>Demo and presentation</h3><p>Collects real photos around campus, makes the poster and slides, rehearses the 3-minute demo, owns the backup plan.</p></div>
@@ -499,7 +492,6 @@ ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;f
       <ul class="plain">
         <li>Bring a phone hotspot; do not rely on hall Wi-Fi.</li>
         <li>Demo photos have cached results, so the flow works even if the API is slow.</li>
-        <li>Offline YOLO model as the last resort if built.</li>
         <li>Keep a copy of the backend on the laptop. If AWS is unreachable, run it locally and connect the phone over the same hotspot.</li>
         <li>Screen recording of a full run, ready to play.</li>
         <li>Charger, extension board, printed QR code that opens the citizen screen.</li>

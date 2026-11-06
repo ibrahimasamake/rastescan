@@ -1,0 +1,72 @@
+[
+ {
+  "file": "news-5.jpg",
+  "credit": "news video still",
+  "w": 1131,
+  "h": 810,
+  "boxes": [
+   {
+    "ymin": 432,
+    "xmin": 221,
+    "ymax": 877,
+    "xmax": 760
+   }
+  ]
+ },
+ {
+  "file": "news-1.jpg",
+  "credit": "The Indian Express",
+  "w": 1200,
+  "h": 667,
+  "boxes": [
+   {
+    "ymin": 480,
+    "xmin": 30,
+    "ymax": 990,
+    "xmax": 800
+   }
+  ]
+ },
+ {
+  "file": "news-2.jpg",
+  "credit": "The Times of India",
+  "w": 1280,
+  "h": 720,
+  "boxes": [
+   {
+    "ymin": 585,
+    "xmin": 190,
+    "ymax": 1000,
+    "xmax": 690
+   }
+  ]
+ },
+ {
+  "file": "news-3.jpg",
+  "credit": "The Economic Times",
+  "w": 1478,
+  "h": 900,
+  "boxes": [
+   {
+    "ymin": 370,
+    "xmin": 160,
+    "ymax": 880,
+    "xmax": 850
+   }
+  ]
+ },
+ {
+  "file": "news-4.jpg",
+  "credit": "The Hindu",
+  "w": 1200,
+  "h": 675,
+  "boxes": [
+   {
+    "ymin": 370,
+    "xmin": 330,
+    "ymax": 900,
+    "xmax": 980
+   }
+  ]
+ }
+]

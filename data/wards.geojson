@@ -1,0 +1,211 @@
+{
+ "type": "FeatureCollection",
+ "name": "rastescan-sample-wards",
+ "description": "SAMPLE ONLY. Six rectangles around Nagawara, Bengaluru for the demo. Not official ward boundaries. Replace with your city's ward GeoJSON (each feature needs properties.code and properties.name).",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "W01",
+    "name": "Hebbal"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.58,
+       13.04
+      ],
+      [
+       77.6134,
+       13.04
+      ],
+      [
+       77.6134,
+       13.08
+      ],
+      [
+       77.58,
+       13.08
+      ],
+      [
+       77.58,
+       13.04
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "W02",
+    "name": "Nagawara"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.6134,
+       13.04
+      ],
+      [
+       77.6467,
+       13.04
+      ],
+      [
+       77.6467,
+       13.08
+      ],
+      [
+       77.6134,
+       13.08
+      ],
+      [
+       77.6134,
+       13.04
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "W03",
+    "name": "Thanisandra"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.6467,
+       13.04
+      ],
+      [
+       77.68,
+       13.04
+      ],
+      [
+       77.68,
+       13.08
+      ],
+      [
+       77.6467,
+       13.08
+      ],
+      [
+       77.6467,
+       13.04
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "W04",
+    "name": "Kavalbyrasandra"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.58,
+       13.0
+      ],
+      [
+       77.6134,
+       13.0
+      ],
+      [
+       77.6134,
+       13.04
+      ],
+      [
+       77.58,
+       13.04
+      ],
+      [
+       77.58,
+       13.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "W05",
+    "name": "HBR Layout"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.6134,
+       13.0
+      ],
+      [
+       77.6467,
+       13.0
+      ],
+      [
+       77.6467,
+       13.04
+      ],
+      [
+       77.6134,
+       13.04
+      ],
+      [
+       77.6134,
+       13.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "code": "W06",
+    "name": "Kalyan Nagar"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       77.6467,
+       13.0
+      ],
+      [
+       77.68,
+       13.0
+      ],
+      [
+       77.68,
+       13.04
+      ],
+      [
+       77.6467,
+       13.04
+      ],
+      [
+       77.6467,
+       13.0
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}
