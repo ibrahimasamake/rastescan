@@ -18,9 +18,11 @@ make test           # what CI runs: pytest, then eslint + tsc -b + vite build
 make seed-demo      # 40 demo reports into backend/data (make unseed-demo removes them)
 make share          # builds web, serves web + API on one port :8000 for other devices (make tunnel adds a public https link)
 make seed-india     # ~200 DEMO reports from real RDD2022 photos (data/india-cases, CC BY, see ATTRIBUTION.md) spread over 20 Indian cities; locations/dates are made up, labels come from the dataset, no AI is run. `make api`/`share` use data/wards-india.geojson (Bengaluru wards + city boxes) via WARDS_FILE
+make seed-fixed     # marks about 45 demo reports as repaired, with SIMULATED after photos made from their own photo (labelled on the report page and in the app)
 make live-demo      # drives a running API (start it with REPORTS_PER_HOUR=2000 make api): new reports, assignments, fixes
 make evaluate       # compare AI providers on test-photos/ (PROVIDERS=groq,bedrock)
 make android        # vite build --mode android + cap sync
+make apk            # builds the Flutter app and publishes it at /api/public/rastescan.apk (Home and footer link to it; the file stays out of git)
 ```
 
 Single backend test (run from `backend/`):
@@ -44,7 +46,7 @@ Real AI: `AI_MODE=groq GROQ_API_KEY=... make api` (or `azure`, `bedrock`). Real 
 - **`schema.py`**: pydantic `Inspection`/`Detection`, `combine()` (dedup, sanity-filter, headline the worst, sum repair time) and `urgency_for()`. **The server, not the model, decides urgency from the severity score** (open manhole is always CRITICAL); do not loosen this. Coordinates for bounding boxes are 0-1000.
 - **`db.py`**: SQLite (WAL) with a base schema plus numbered `MIGRATIONS` tracked by `PRAGMA user_version`; add schema changes as a new migration entry, don't edit old ones.
 - **`costing.py`**: deterministic ₹ repair estimate (materials + crew labour) from the AI's measured size/depth; unit rates live in one table at the top. Surfaced as `repair_estimate` in `public_detail` and summed by `services.impact()` (`/api/public/impact`). `services.activity()` feeds the live ticker (`/api/public/activity`, public-only fields).
-- **Other**: `imaging.py` (EXIF GPS, face/number-plate blur before storing or sending to any AI), `storage.py` (local disk vs S3), `triage.py` (due dates, duplicates, queue/route order), `wards.py` (point-in-polygon), `geocode.py` (PIN code and state for a report's pin from OpenStreetMap Nominatim, one request a second, cached per location by `services.address`; `GEOCODE_URL` empty switches it off), `notify.py` (optional SMTP), `ratelimit.py`, `auth.py`.
+- **Other**: `imaging.py` (EXIF GPS, face/number-plate blur before storing or sending to any AI), `storage.py` (local disk vs S3), `triage.py` (due dates, duplicates, queue/route order), `wards.py` (point-in-polygon), `geocode.py` (PIN code and state for a report's pin from OpenStreetMap Nominatim, one request a second, cached per location by `services.address`; `GEOCODE_URL` empty switches it off; a background thread runs `services.fill_addresses` so `public_item` can carry the kept `address` without ever calling the network), `notify.py` (optional SMTP), `ratelimit.py`, `auth.py`.
 
 ### Tests (`backend/tests/`)
 `conftest.py` provides `client` (PIN mode with a `FixedInspector` whose `.result`/`.busy` tests set), `officer_client` (seeded admin, no PIN), `fake_client`, plus helpers `submit()`, `login()`, `make_result()`, `photo_bytes()`. Tests build the app with `Settings(...)` pointing `data_dir` at `tmp_path` and `web_dist` at a missing dir; they never call real AI.
@@ -55,7 +57,7 @@ HashRouter SPA (works the same on web, CloudFront, and inside Capacitor). `main.
 
 ## Mobile app (`mobile/`)
 
-Flutter client for the same API (`--dart-define=API_BASE=...`, default the dev tunnel). `lib/api.dart` citizen API and models, `lib/officer_api.dart` officer API, `lib/ui.dart` the design system (asphalt, lane-paint yellow, Barlow Condensed via `display()`, corner-tick AI frames, `LaneLine`), `lib/pages/` the screens, `pages/intro.dart` the opening film. Checks from `mobile/`: `flutter analyze lib`, `flutter test`. Play release steps are in `mobile/README.md`; the keystore and `android/key.properties` are git-ignored. Report pages (web `src/address.ts`, app `Api.address`) get PIN code, state and road from the server.
+Flutter client for the same API (`--dart-define=API_BASE=...`, default the dev tunnel). `lib/api.dart` citizen API and models, `lib/officer_api.dart` officer API, `lib/ui.dart` the design system (asphalt, lane-paint yellow, Barlow Condensed via `display()`, corner-tick AI frames, `LaneLine`), `lib/pages/` the screens, `pages/intro.dart` the opening film. Checks from `mobile/`: `flutter analyze lib`, `flutter test`. Play release steps are in `mobile/README.md`; the keystore and `android/key.properties` are git-ignored. Every report carries `address` once its location is known; lists show PIN code and state from it (web `Place`, app `Report.place`). Report and result pages ask for it if it is not there yet (web `useAddress`, app `Api.address`).
 
 ## Rules from the project README
 - Never commit secrets (AWS keys, `.env`, `terraform.tfvars`, `*.pem`, keystores, PINs, passwords).

@@ -2,6 +2,7 @@ import httpx
 from fastapi.testclient import TestClient
 
 from app import geocode
+from app import services as svc
 from app.config import Settings
 from app.inspector import FakeInspector
 from app.main import create_app
@@ -64,6 +65,69 @@ def test_lookup_can_be_switched_off(tmp_path, monkeypatch):
     code = submit(off)["code"]
     assert off.get(f"/api/public/reports/{code}/address").json() == {}
     assert calls == []
+
+
+def test_reports_carry_the_kept_address_without_looking_it_up(client, monkeypatch):
+    calls = fake_lookup(monkeypatch, DELHI)
+    code = submit(client)["code"]
+    listed = client.get("/api/public/reports").json()["items"][0]
+    assert listed["address"] is None
+    assert calls == []
+
+    client.get(f"/api/public/reports/{code}/address")
+    assert client.get("/api/public/reports").json()["items"][0]["address"] == DELHI
+    assert client.get(f"/api/public/reports/{code}").json()["address"] == DELHI
+    assert client.get(f"/api/reports/{code}").json()["address"] == DELHI
+    assert len(calls) == 1
+
+
+def test_export_has_pin_code_and_state(client, monkeypatch):
+    fake_lookup(monkeypatch, DELHI)
+    code = submit(client)["code"]
+    client.get(f"/api/public/reports/{code}/address")
+    header, row = client.get("/api/public/export.csv").text.splitlines()[:2]
+    assert ",pin_code,state," in header
+    assert ",110004,Delhi," in row
+
+
+def test_fill_finds_each_location_once(client, monkeypatch):
+    calls = fake_lookup(monkeypatch, DELHI)
+    ctx = client.app.state.ctx
+    submit(client)
+    submit(client, lat=28.6)
+    assert svc.fill_addresses(ctx) == 2
+    assert {c[1] for c in calls} == {13.05, 28.6}
+    assert svc.fill_addresses(ctx) == 0
+    assert len(calls) == 2
+    assert all(i["address"] == DELHI for i in client.get("/api/public/reports").json()["items"])
+
+
+def test_fill_stops_when_the_service_fails_and_tries_again_later(client, monkeypatch):
+    calls = fake_lookup(monkeypatch, None)
+    ctx = client.app.state.ctx
+    submit(client)
+    submit(client, lat=28.6)
+    assert svc.fill_addresses(ctx) == 0
+    assert len(calls) == 1
+    fake_lookup(monkeypatch, DELHI)
+    assert svc.fill_addresses(ctx) == 2
+
+
+def test_place_with_no_address_is_kept_and_not_asked_again(client, monkeypatch):
+    monkeypatch.setattr(geocode, "MIN_GAP_S", 0)
+    asked = []
+
+    def nothing_here(url, **kw):
+        asked.append(url)
+        return httpx.Response(200, json={"error": "Unable to geocode"}, request=httpx.Request("GET", url))
+
+    monkeypatch.setattr(geocode.httpx, "get", nothing_here)
+    code = submit(client)["code"]
+    ctx = client.app.state.ctx
+    assert svc.fill_addresses(ctx) == 1
+    assert svc.fill_addresses(ctx) == 0
+    assert len(asked) == 1
+    assert client.get(f"/api/public/reports/{code}/address").json()["pin"] is None
 
 
 def test_reverse_reads_an_indian_address_and_survives_failure(monkeypatch):

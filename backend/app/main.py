@@ -75,8 +75,17 @@ def create_app(settings: Settings | None = None, inspector: Inspector | None = N
                 except Exception:  # noqa: BLE001 - never let the worker die
                     log.exception("pending-scan worker error")
 
+        def address_worker():
+            while not stop.wait(settings.rescan_every_s):
+                try:
+                    svc.fill_addresses(ctx, stop)
+                except Exception:  # noqa: BLE001 - never let the worker die
+                    log.exception("address-fill worker error")
+
         if settings.rescan_every_s > 0:
             threading.Thread(target=worker, name="pending-scan", daemon=True).start()
+            if settings.geocode_url:
+                threading.Thread(target=address_worker, name="address-fill", daemon=True).start()
         yield
         stop.set()
 

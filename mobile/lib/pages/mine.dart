@@ -94,6 +94,7 @@ class MinePageState extends State<MinePage> {
                               Text(r.aiPending ? 'Waiting for the AI' : r.hazard, style: display(27, h: 1.05)),
                               const SizedBox(height: 2),
                               Text('${r.code} · ${ago(r.createdAt)}', style: const TextStyle(color: muted, fontSize: 12.5)),
+                              if (r.place != null) Text(r.place!, style: const TextStyle(color: muted, fontSize: 12.5)),
                               const SizedBox(height: 10),
                               Row(children: [
                                 Text(statusLabel(r.publicStatus), style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: r.publicStatus == 'resolved' ? ok : navy)),

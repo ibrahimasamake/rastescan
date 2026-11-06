@@ -67,6 +67,8 @@ export function ReportPanel({ code, assignees, onChange }: { code: string; assig
       <dl className="facts">
         <dt>{t("report.hazard")}</dt><dd>{hazardLabel(t, r.hazard_type)} · {t("report.severityValue", { n: num(r.severity, 1) })}</dd>
         <dt>{t("report.ward")}</dt><dd>{r.ward?.name ?? "–"}</dd>
+        {r.address?.pin && <><dt>{t("report.pin")}</dt><dd className="num"><b>{r.address.pin}</b></dd></>}
+        {r.address?.state && <><dt>{t("report.state")}</dt><dd>{r.address.state}</dd></>}
         <dt>{t("report.assignee")}</dt><dd>{r.assignee ?? t("report.notAssigned")}</dd>
         <dt>{t("report.citizens")}</dt><dd>{num(r.reported_count)}</dd>
         {r.note && <><dt>{t("officer.note")}</dt><dd>{r.note}</dd></>}

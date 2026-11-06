@@ -172,6 +172,7 @@ class _Card extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(r.hazard, style: display(30, color: Colors.white, h: 1)),
                   Text(r.ward ?? r.code, style: const TextStyle(color: Color(0xFFB9BDC4))),
+                  if (r.place != null) Text(r.place!, style: const TextStyle(color: Color(0xFFB9BDC4), fontSize: 12.5)),
                   const SizedBox(height: 6),
                   Text('AI ${r.severity.toStringAsFixed(1)} · ${ago(r.createdAt)}', style: const TextStyle(fontSize: 12.5, color: Colors.white)),
                   if (r.costInr > 0) Text('Repair ${inr(r.costInr)}', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white)),

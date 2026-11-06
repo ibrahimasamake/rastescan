@@ -1,6 +1,6 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { type Address, lookupAddress } from "../address";
+import { useAddress } from "../address";
 import { api, ApiError, type PublicDetail } from "../api";
 import { DemoBadge, StatusBadge, UrgencyBadge } from "../components/Badges";
 import { Icon } from "../components/Icons";
@@ -70,12 +70,7 @@ export default function ReportPage() {
   const { code = "" } = useParams();
   const { t, num, date } = useI18n();
   const { data: r, error, loading, reload, setData } = useAsync(() => api.report(code), [code], 30000);
-  const [addr, setAddr] = useState<Address | null>(null);
-  useEffect(() => {
-    let live = true;
-    lookupAddress(code).then((a) => { if (live) setAddr(a); });
-    return () => { live = false; };
-  }, [code]);
+  const addr = useAddress(code, r?.address);
 
   if (loading && !r) {
     return (
@@ -125,6 +120,7 @@ export default function ReportPage() {
           {r.after_photo_url ? (
             <>
               <BeforeAfter before={r.photo_url} after={r.after_photo_url} code={r.code} />
+              {r.is_demo && <p className="small muted">{t("report.demoAfter")}</p>}
               {afterText && <p className={r.public_status === "resolved" ? "ok-text" : "overdue-text"}>{afterText}</p>}
             </>
           ) : (

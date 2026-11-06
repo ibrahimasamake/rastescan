@@ -52,7 +52,7 @@ def reverse(url: str, lat: float, lng: float) -> dict | None:
     finally:
         _turn.release()
     if not isinstance(found, dict):
-        return None
+        found = {}  # the service answered and knows nothing here (open water, say): keep that, so this point is not asked again
     return {
         "pin": _first(found, "postcode"),
         "state": _first(found, "state", "territory"),

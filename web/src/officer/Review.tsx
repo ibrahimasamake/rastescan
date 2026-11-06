@@ -2,6 +2,7 @@ import { useState } from "react";
 import { absUrl, officerApi } from "../api";
 import { Empty, ErrorBox, Skeleton, useAsync } from "../components/States";
 import { ago, hazardLabel } from "../format";
+import { Place } from "../components/Report";
 import { useI18n } from "../i18n";
 import { ReportPanel } from "./Panel";
 import { OfficerShell } from "./Shell";
@@ -31,6 +32,7 @@ function ReviewBody() {
               <div className="body">
                 <b>{r.code} · {r.ai_pending ? t("officer.aiBusy").split(".")[0] : hazardLabel(t, r.hazard_type)}</b>
                 <span className="small muted">{Math.round(r.confidence * 100)}% · {ago(t, r.created_at)}</span>
+                <Place address={r.address} />
               </div>
             </button>
           </li>

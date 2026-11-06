@@ -448,6 +448,29 @@ class _RingPainter extends CustomPainter {
 
 // ---------------------------------------------------------------- result
 
+/// PIN code and state on the result. A brand new report has none yet, so this asks the server once.
+class _ResultPlace extends StatefulWidget {
+  const _ResultPlace(this.report);
+  final Report report;
+
+  @override
+  State<_ResultPlace> createState() => _ResultPlaceState();
+}
+
+class _ResultPlaceState extends State<_ResultPlace> {
+  late final Future<Address?> _asked = widget.report.place != null ? Future.value(null) : Api.instance.address(widget.report.code);
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<Address?>(
+        future: _asked,
+        builder: (_, s) {
+          final place = widget.report.place ?? s.data?.place;
+          if (place == null) return const SizedBox.shrink();
+          return Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(place, style: const TextStyle(color: muted, fontWeight: FontWeight.w600)));
+        },
+      );
+}
+
 class _ResultView extends StatelessWidget {
   const _ResultView({super.key, required this.report, required this.onAgain});
   final Report report;
@@ -502,6 +525,7 @@ class _ResultView extends StatelessWidget {
                   UrgencyPill(r.urgency),
                 ]),
                 const SizedBox(height: 12),
+                _ResultPlace(r),
                 Text('Severity ${r.severity.toStringAsFixed(1)} / 10', style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
                 TweenAnimationBuilder<double>(

@@ -6,7 +6,8 @@ import AnalysisStage from "../components/AnalysisStage";
 import { UrgencyBadge } from "../components/Badges";
 import { Icon } from "../components/Icons";
 import { PageHead } from "../components/Layout";
-import { DetectionList, PhotoWithBox, SeverityMeter } from "../components/Report";
+import { useAddress } from "../address";
+import { DetectionList, PhotoWithBox, Place, SeverityMeter } from "../components/Report";
 import { Skeleton } from "../components/States";
 import { deviceId, hazardLabel } from "../format";
 import { useI18n } from "../i18n";
@@ -53,6 +54,7 @@ function Result({ r, again }: { r: Report; again: () => void }) {
   const res = r.result;
   const trackCode = r.merged_into ?? r.code;
   const published = !["no_damage", "review"].includes(r.status);
+  const place = useAddress(trackCode, r.address);
   const box = useRef<HTMLElement>(null);
 
   // Reveal: the photo wipes in, a reflection sweeps across it, the AI draws its boxes, then the details cascade.
@@ -93,6 +95,7 @@ function Result({ r, again }: { r: Report; again: () => void }) {
               <h2>{hazardLabel(t, res.hazard_type)}</h2>
               <UrgencyBadge urgency={r.urgency} />
             </div>
+            <Place address={place} />
             <p className="small">{t("report.severityValue", { n: r.severity.toFixed(1) })} · {t(`fix.${r.urgency}` as Key)}</p>
             <SeverityMeter score={r.severity} urgency={r.urgency} />
             <p className="rec" lang="en">{res.repair_recommendation}</p>

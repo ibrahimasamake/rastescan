@@ -5,7 +5,7 @@ import { DemoBadge, StatusBadge, UrgencyBadge } from "../components/Badges";
 import { Filters, useFilters } from "../components/Filters";
 import { Icon } from "../components/Icons";
 import { PageHead } from "../components/Layout";
-import { SeverityMeter } from "../components/Report";
+import { Place, SeverityMeter } from "../components/Report";
 import { Empty, ErrorBox, Skeleton, useAsync } from "../components/States";
 import { CLOSED, ago, hazardLabel, inr, sla } from "../format";
 import { useI18n } from "../i18n";
@@ -31,6 +31,7 @@ function Tile({ r, fresh }: { r: PublicReport; fresh: boolean }) {
       <div className="body">
         <div className="row"><b>{hazardLabel(t, r.hazard_type)}</b><StatusBadge status={r.public_status} /></div>
         <div className="row small muted"><span><Icon name="pin" size={13} /> {r.ward?.name ? `${r.ward.name} · ${r.code}` : r.code}</span><span>{ago(t, r.created_at)}</span></div>
+        <Place address={r.address} />
         {r.repair_recommendation && <p className="small tile-rec" lang="en">{r.repair_recommendation}</p>}
         <SeverityMeter score={r.severity} urgency={r.urgency} />
         <div className="row small">

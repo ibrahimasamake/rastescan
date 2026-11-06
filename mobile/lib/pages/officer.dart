@@ -207,6 +207,7 @@ class _QueuePageState extends State<QueuePage> with SingleTickerProviderStateMix
                               Row(children: [Expanded(child: Text(r.hazard, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))), UrgencyPill(r.urgency)]),
                               const SizedBox(height: 3),
                               Text('${r.code} · ${r.ward ?? 'no ward'} · ${ago(r.createdAt)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: muted, fontSize: 12.5)),
+                              if (r.place != null) Text(r.place!, style: const TextStyle(color: muted, fontSize: 12.5)),
                               const SizedBox(height: 7),
                               Wrap(spacing: 6, children: [
                                 Pill('AI ${r.severity.toStringAsFixed(1)}', color: const Color(0xFFEAF0F7), fg: navy),
@@ -332,6 +333,7 @@ class _OfficerReportPageState extends State<OfficerReportPage> {
                 Row(children: [Expanded(child: Text(rep.hazard, style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w800, letterSpacing: -.7))), UrgencyPill(rep.urgency)]),
                 const SizedBox(height: 4),
                 Text('${rep.ward ?? 'No ward'} · ${ago(rep.createdAt)} · ${rep.reportedCount} citizen${rep.reportedCount == 1 ? '' : 's'}', style: const TextStyle(color: muted)),
+                if (rep.place != null) Text(rep.place!, style: const TextStyle(color: muted)),
                 const SizedBox(height: 10),
                 Wrap(spacing: 8, runSpacing: 6, children: [
                   Pill('Status: ${rep.status}', color: navy),

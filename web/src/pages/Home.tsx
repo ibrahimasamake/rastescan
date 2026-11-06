@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import { AppSection } from "../components/AppDownload";
 import HeroReel from "../components/HeroReel";
 import { ActivityFeed, ReportCard } from "../components/Report";
 import { Empty, Skeleton, useAsync } from "../components/States";
@@ -34,6 +35,8 @@ export default function Home() {
       <HeroReel />
 
       <div className="wrap page">
+        <AppSection />
+
         <section className="section" aria-labelledby="map-h">
           <div className="section-head">
             <h2 id="map-h">{t("home.mapTitle")}</h2>

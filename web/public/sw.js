@@ -40,6 +40,7 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.endsWith(".apk")) return; // far too big to keep in the offline cache
   if (url.pathname.includes("/assets/") || url.pathname.includes("/api/photos/")) {
     e.respondWith(cacheFirst(req));
   } else if (url.pathname.includes("/api/public/") || req.mode === "navigate") {

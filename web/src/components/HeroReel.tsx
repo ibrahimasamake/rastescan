@@ -12,6 +12,7 @@ import { Icon } from "./Icons";
 
 const SCENE_S = 6.5;   // seconds per photo
 const FPS = 30;        // the reel is locked to a film-like 30 frames a second
+const MAX_SHOTS = 4;   // the first entry in public/banner/meta.json plays first
 const rand = gsap.utils.random;
 
 interface Box { ymin: number; xmin: number; ymax: number; xmax: number }
@@ -121,7 +122,7 @@ export default function HeroReel() {
 
       const live: Scene[] = [];
       const page = await api.reports({ status: "open", sort: "urgency", per_page: 14 }).catch(() => null);
-      const items = (page?.items ?? []).filter((r) => r.photo_url).slice(0, 6);
+      const items = (page?.items ?? []).filter((r) => r.photo_url).slice(0, MAX_SHOTS);
       const details = await Promise.all(items.map((r) => api.report(r.code).catch(() => null)));
       const imgs = await Promise.all(details.map((d) => (d ? load(absUrl(d.photo_url)) : Promise.resolve(null))));
       details.forEach((d, k) => {
@@ -140,7 +141,7 @@ export default function HeroReel() {
       // news, report, news, report ...
       const mixed: Scene[] = [];
       for (let k = 0; k < Math.max(news.length, live.length); k++) { if (news[k]) mixed.push(news[k]); if (live[k]) mixed.push(live[k]); }
-      if (!dead) setScenes(mixed);
+      if (!dead) setScenes(mixed.slice(0, MAX_SHOTS));
     })();
     return () => { dead = true; };
   }, []);

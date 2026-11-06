@@ -3,6 +3,7 @@ import { Link, NavLink } from "react-router-dom";
 import { LANGS, useI18n, type TextSize } from "../i18n";
 import { usePortal } from "../portal";
 import { onChange, pending, startOutbox } from "../outbox";
+import { AppLink } from "./AppDownload";
 import { Emblem } from "./Emblem";
 import { Toast, useToast } from "./States";
 
@@ -104,6 +105,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <ul>
               <li><Link to="/about">{t("footer.about")}</Link></li>
               <li><Link to="/about#how">{t("footer.how")}</Link></li>
+              <AppLink />
               <li><Link to="/wards">{t("nav.wards")}</Link></li>
             </ul>
           </section>

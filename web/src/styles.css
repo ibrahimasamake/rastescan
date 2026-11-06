@@ -550,3 +550,6 @@ input, select, textarea { border-radius: 12px; }
   .an-steps li { font-size: .95rem; }
 }
 @media (prefers-reduced-motion: reduce) { .an-steps li.now i { animation: none; } .an-scan, .an-shine { display: none; } }
+
+/* PIN code and state wherever a report is listed */
+.place { display: block; }
