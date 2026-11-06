@@ -97,6 +97,7 @@ class _BodyState extends State<_Body> {
               Text('After the repair', style: display(28)),
               const SizedBox(height: 10),
               ClipRRect(borderRadius: BorderRadius.circular(20), child: BoxedPhoto(url: r.afterPhotoUrl!)),
+              if (r.isDemo) const Padding(padding: EdgeInsets.only(top: 8), child: Text('Demo data: this after photo is simulated, not a real repair.', style: TextStyle(color: muted, fontSize: 12.5))),
               const SizedBox(height: 24),
             ],
             if (r.recommendation != null && r.recommendation!.isNotEmpty) ...[

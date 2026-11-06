@@ -7,7 +7,7 @@ import io
 from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from . import services as svc
@@ -180,6 +180,17 @@ def recently_resolved(request: Request, limit: int = Query(8, ge=1, le=30), ctx:
     rows = ctx.db.query(svc.COUNTS_SQL + " WHERE r.parent_id IS NULL AND r.status = 'verified' "
                         "ORDER BY r.resolved_at DESC LIMIT ?", (limit,))
     return cached_json(request, [svc.public_item(ctx, r) for r in rows], max_age=15)
+
+
+@router.api_route("/rastescan.apk", methods=["GET", "HEAD"], include_in_schema=False)
+def download_app(ctx: Ctx = Depends(get_ctx)):
+    """The Android app, for people to install from the website. `make apk` puts the file here; it is too big to keep in git.
+    Cacheable so a CDN in front can serve it and spare the server's connection; a new build reaches everyone within the hour."""
+    file = ctx.settings.data_dir / "downloads" / "rastescan.apk"
+    if not file.is_file():
+        raise HTTPException(404, "The Android app is not available here yet.")
+    return FileResponse(file, media_type="application/vnd.android.package-archive", filename="RasteScan.apk",
+                        headers={"Cache-Control": "public, max-age=3600"})
 
 
 CSV_FIELDS = ["code", "created_at", "ward_code", "ward_name", "pin_code", "state", "hazard_type", "severity", "urgency", "public_status",

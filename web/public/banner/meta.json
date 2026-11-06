@@ -1,15 +1,15 @@
 [
  {
-  "file": "news-5.jpg",
+  "file": "news-6.jpg",
   "credit": "news video still",
-  "w": 1131,
-  "h": 810,
+  "w": 739,
+  "h": 415,
   "boxes": [
    {
-    "ymin": 432,
-    "xmin": 221,
-    "ymax": 877,
-    "xmax": 760
+    "ymin": 420,
+    "xmin": 600,
+    "ymax": 715,
+    "xmax": 895
    }
   ]
  },

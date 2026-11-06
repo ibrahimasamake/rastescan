@@ -120,6 +120,7 @@ export default function ReportPage() {
           {r.after_photo_url ? (
             <>
               <BeforeAfter before={r.photo_url} after={r.after_photo_url} code={r.code} />
+              {r.is_demo && <p className="small muted">{t("report.demoAfter")}</p>}
               {afterText && <p className={r.public_status === "resolved" ? "ok-text" : "overdue-text"}>{afterText}</p>}
             </>
           ) : (
