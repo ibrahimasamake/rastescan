@@ -19,9 +19,9 @@ Without `key.properties` the release build falls back to the debug key (fine for
 
 ## Google Play internal testing
 1. Play Console > Create app: name RasteScan, language, App, Free.
-2. App content: privacy policy URL `https://dev.samibrahima.tech/privacy.html`, Data safety (photos, approximate/precise location, device id, all sent to the server, not sold), content rating, target audience, ads = none.
-3. Testing > Internal testing > Create new release > upload `app-release.aab` > release name `1.0.0 (1)` > Save > Review > Start rollout.
+2. App content: privacy policy URL `https://dev.samibrahima.tech/privacy.html`, Data safety (photos, approximate/precise location, device id, all sent to the server, not sold; a report's coordinates are also sent to OpenStreetMap to look up its PIN code and address), content rating, target audience, ads = none.
+3. Testing > Internal testing > Create new release > upload `app-release.aab` > release name `1.0.1 (2)` > Save > Review > Start rollout.
 4. Testers tab: create an email list, add the testers' Google accounts, copy the opt-in link and send it to them.
-5. Next uploads: bump `version:` in `pubspec.yaml` (`1.0.1+2`, the number after + must increase every time).
+5. Next uploads: bump `version:` in `pubspec.yaml` (for example `1.0.2+3`, the number after + must increase every time).
 
 The server must stay reachable over https. Before real use, point `API_BASE` at a stable deployed server, not the Mac tunnel.

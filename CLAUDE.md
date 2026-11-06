@@ -53,6 +53,10 @@ Real AI: `AI_MODE=groq GROQ_API_KEY=... make api` (or `azure`, `bedrock`). Real 
 
 HashRouter SPA (works the same on web, CloudFront, and inside Capacitor). `main.tsx` lists all routes; non-home pages are lazy-loaded. `pages/` is the public portal, `officer/` the dashboard, `api.ts` the single API client, `i18n/` has en/kn/hi dictionaries (add strings to all three), `outbox.ts` queues reports for offline sending, `public/sw.js` is the offline service worker (production builds only). The Home banner (`components/HeroReel.tsx`) is a GSAP reel built from the worst live reports: photo tiles explode and re-assemble, the AI box is drawn from each report's `bounding_box`; the ticker is locked to 30 fps, it pauses off screen, and it falls back to a still photo under `prefers-reduced-motion` (append `?motion=on` to the URL to force it). `components/IntroVideo.tsx` plays `public/rastescan-intro.mp4` once per visit when a visit lands on Home, with a Skip button; it is skipped under reduced motion too, and gives up if the video has not started in 4 s. `vite.config.ts` uses `base: "./"` so the build also works in the Android app (`.env.android`).
 
+## Mobile app (`mobile/`)
+
+Flutter client for the same API (`--dart-define=API_BASE=...`, default the dev tunnel). `lib/api.dart` citizen API and models, `lib/officer_api.dart` officer API, `lib/ui.dart` the design system (asphalt, lane-paint yellow, Barlow Condensed via `display()`, corner-tick AI frames, `LaneLine`), `lib/pages/` the screens, `pages/intro.dart` the opening film. Checks from `mobile/`: `flutter analyze lib`, `flutter test`. Play release steps are in `mobile/README.md`; the keystore and `android/key.properties` are git-ignored. Report pages (web `src/address.ts`, app `Api.address`) get PIN code, state and road from OpenStreetMap's Nominatim, one lookup per report opened.
+
 ## Rules from the project README
 - Never commit secrets (AWS keys, `.env`, `terraform.tfvars`, `*.pem`, keystores, PINs, passwords).
 - Work on a branch and PR into `main`; CI must be green.
