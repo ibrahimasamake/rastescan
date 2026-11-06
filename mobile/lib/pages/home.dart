@@ -270,7 +270,7 @@ class _HeroState extends State<_Hero> with SingleTickerProviderStateMixin {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(
           height: photoH,
-          child: Stack(fit: StackFit.expand, children: [
+          child: Stack(fit: StackFit.expand, clipBehavior: Clip.hardEdge, children: [
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 1100),
               child: r == null

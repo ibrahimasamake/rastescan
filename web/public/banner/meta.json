@@ -1,5 +1,19 @@
 [
  {
+  "file": "news-5.jpg",
+  "credit": "news video still",
+  "w": 1131,
+  "h": 810,
+  "boxes": [
+   {
+    "ymin": 432,
+    "xmin": 221,
+    "ymax": 877,
+    "xmax": 760
+   }
+  ]
+ },
+ {
   "file": "news-1.jpg",
   "credit": "The Indian Express",
   "w": 1200,

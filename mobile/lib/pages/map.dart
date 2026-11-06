@@ -88,9 +88,10 @@ class _MapPageState extends State<MapPage> {
             onTap: (_, __) => setState(() => focus = null),
           ),
           children: [
-            TileLayer(urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', subdomains: const ['a', 'b', 'c', 'd'], userAgentPackageName: 'tech.rastescan.app'),
+            TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'tech.rastescan.app'),
             MarkerLayer(markers: [
-              for (final r in items)
+              // the list is worst first; draw it in reverse so critical pins sit on top
+              for (final r in items.reversed)
                 Marker(
                   point: LatLng(r.lat!, r.lng!),
                   width: focus?.code == r.code ? 46 : 30,
@@ -113,7 +114,7 @@ class _MapPageState extends State<MapPage> {
                   ),
                 ),
             ]),
-            const RichAttributionWidget(attributions: [TextSourceAttribution('© OpenStreetMap contributors © CARTO')]),
+            const RichAttributionWidget(attributions: [TextSourceAttribution('© OpenStreetMap contributors')]),
           ],
         ),
         SafeArea(
@@ -136,13 +137,13 @@ class _MapPageState extends State<MapPage> {
           ),
         ),
         if (error != null)
-          Center(child: Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(mainAxisSize: MainAxisSize.min, children: [const Text('Could not load the map.'), const SizedBox(height: 8), FilledButton(onPressed: _load, child: const Text('Retry'))])))),
+          Center(child: Container(margin: const EdgeInsets.all(24), padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: navy, borderRadius: BorderRadius.circular(20)), child: Column(mainAxisSize: MainAxisSize.min, children: [Text('Could not load reports', style: display(26, color: Colors.white)), const SizedBox(height: 4), const Text('Check your connection and try again.', style: TextStyle(color: Color(0xFFB9BDC4))), const SizedBox(height: 14), BigButton('Try again', icon: Icons.refresh, onTap: _load)]))),
         AnimatedPositioned(
           duration: const Duration(milliseconds: 380),
           curve: Curves.easeOutCubic,
           left: 12,
           right: 12,
-          bottom: focus == null ? -280 : 96,
+          bottom: focus == null ? -280 : 122,
           child: focus == null ? const SizedBox(height: 1) : _Card(r: focus!),
         ),
       ]),

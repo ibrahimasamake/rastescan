@@ -154,14 +154,26 @@ class Api {
 
   Future<dynamic> _get(String path, [Map<String, String>? q]) async {
     final uri = Uri.parse(apiBase + path).replace(queryParameters: q);
-    try {
-      final res = await _c.get(uri).timeout(const Duration(seconds: 25));
-      return _decode(res);
-    } on ApiError {
-      rethrow;
-    } catch (_) {
-      throw ApiError('offline');
+    // One quiet retry: a dropped connection or a 5xx from the gateway often clears in a couple of seconds.
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final res = await _c.get(uri).timeout(const Duration(seconds: 25));
+        if (res.statusCode >= 500 && attempt == 0) {
+          await Future.delayed(const Duration(milliseconds: 1800));
+          continue;
+        }
+        return _decode(res);
+      } on ApiError {
+        rethrow;
+      } catch (_) {
+        if (attempt == 0) {
+          await Future.delayed(const Duration(milliseconds: 1800));
+          continue;
+        }
+        throw ApiError('offline');
+      }
     }
+    throw ApiError('offline');
   }
 
   dynamic _decode(http.Response res) {
