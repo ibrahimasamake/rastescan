@@ -134,6 +134,13 @@ class Activity {
   DateTime get at => DateTime.tryParse('${j['at']}')?.toLocal() ?? DateTime.now();
 }
 
+/// PIN code, state and road for a report's pin, from OpenStreetMap's address lookup. Reports only store coordinates,
+/// so this is the nearest known address to the pin.
+class Address {
+  Address(this.road, this.area, this.city, this.district, this.state, this.pin);
+  final String? road, area, city, district, state, pin;
+}
+
 class Api {
   Api._();
   static final Api instance = Api._();
@@ -184,6 +191,37 @@ class Api {
       if (b is Map && b['detail'] is String) msg = b['detail'];
     } catch (_) {}
     throw ApiError(msg, res.statusCode);
+  }
+
+  final Map<String, Address?> _addresses = {};
+
+  Future<Address?> address(double lat, double lng) async {
+    final key = '${lat.toStringAsFixed(5)},${lng.toStringAsFixed(5)}';
+    if (_addresses.containsKey(key)) return _addresses[key];
+    try {
+      final uri = Uri.https('nominatim.openstreetmap.org', '/reverse', {'format': 'jsonv2', 'zoom': '18', 'addressdetails': '1', 'accept-language': 'en', 'lat': '$lat', 'lon': '$lng'});
+      final res = await _c.get(uri, headers: {'User-Agent': 'RasteScan/1.0 (road repair portal)'}).timeout(const Duration(seconds: 12));
+      if (res.statusCode != 200) return null;
+      final j = jsonDecode(utf8.decode(res.bodyBytes))['address'];
+      if (j is! Map) return null;
+      String? pick(List<String> keys) {
+        for (final k in keys) {
+          if (j[k] != null) return '${j[k]}';
+        }
+        return null;
+      }
+
+      return _addresses[key] = Address(
+        pick(['road']),
+        pick(['suburb', 'neighbourhood', 'village', 'hamlet', 'quarter']),
+        pick(['city', 'town', 'municipality']),
+        pick(['state_district', 'county', 'city_district']),
+        pick(['state', 'territory']),
+        pick(['postcode']),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<Stats> stats() async => Stats.from(await _get('/api/public/stats'));

@@ -48,7 +48,8 @@ class _IntroFilmState extends State<IntroFilm> {
       // Also ends the film if playback stalls and never reports reaching the end.
       _timer?.cancel();
       _timer = Timer(c.value.duration + const Duration(seconds: 3), _finish);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Intro film could not play: $e');
       _finish();
     }
   }

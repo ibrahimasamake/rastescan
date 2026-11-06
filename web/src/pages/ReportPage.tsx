@@ -1,5 +1,6 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { type Address, lookupAddress } from "../address";
 import { api, ApiError, type PublicDetail } from "../api";
 import { DemoBadge, StatusBadge, UrgencyBadge } from "../components/Badges";
 import { Icon } from "../components/Icons";
@@ -69,6 +70,14 @@ export default function ReportPage() {
   const { code = "" } = useParams();
   const { t, num, date } = useI18n();
   const { data: r, error, loading, reload, setData } = useAsync(() => api.report(code), [code], 30000);
+  const [addr, setAddr] = useState<Address | null>(null);
+  const lat = r?.lat ?? null, lng = r?.lng ?? null;
+  useEffect(() => {
+    if (lat === null || lng === null) return;
+    let live = true;
+    lookupAddress(lat, lng).then((a) => { if (live) setAddr(a); });
+    return () => { live = false; };
+  }, [lat, lng]);
 
   if (loading && !r) {
     return (
@@ -135,6 +144,13 @@ export default function ReportPage() {
               <dt>{t("report.severity")}</dt>
               <dd>{t("report.severityValue", { n: num(r.severity, 1) })}<SeverityMeter score={r.severity} urgency={r.urgency} /></dd>
               <dt>{t("report.ward")}</dt><dd>{r.ward?.name ?? "–"}</dd>
+              {addr?.pin && <><dt>{t("report.pin")}</dt><dd className="num"><b>{addr.pin}</b></dd></>}
+              {addr?.state && <><dt>{t("report.state")}</dt><dd>{addr.state}</dd></>}
+              {addr?.district && <><dt>{t("report.district")}</dt><dd>{addr.district}</dd></>}
+              {addr?.city && <><dt>{t("report.city")}</dt><dd>{addr.city}</dd></>}
+              {addr?.area && <><dt>{t("report.area")}</dt><dd>{addr.area}</dd></>}
+              {addr?.road && <><dt>{t("report.road")}</dt><dd>{addr.road}</dd></>}
+              {r.lat !== null && r.lng !== null && <><dt>{t("report.coords")}</dt><dd className="num">{r.lat.toFixed(5)}, {r.lng.toFixed(5)}</dd></>}
               <dt>{t("report.location")}</dt>
               <dd>{r.lat !== null && r.lng !== null
                 ? <a href={`https://www.openstreetmap.org/?mlat=${r.lat}&mlon=${r.lng}#map=18/${r.lat}/${r.lng}`} target="_blank" rel="noreferrer">{t("report.openMap")}</a>

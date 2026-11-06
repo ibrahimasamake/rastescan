@@ -90,6 +90,8 @@ class _BodyState extends State<_Body> {
         Padding(
           padding: const EdgeInsets.fromLTRB(18, 24, 18, 110),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _LocationFacts(r),
+            const SizedBox(height: 24),
             if (r.afterPhotoUrl != null) ...[
               Text('After the repair', style: display(28)),
               const SizedBox(height: 10),
@@ -158,5 +160,57 @@ class _BodyState extends State<_Body> {
       'duplicate_added' => 'Another citizen confirmed it',
       _ => ev.replaceAll('_', ' '),
     };
+  }
+}
+
+/// Where the damage is, and the dates that matter: what an official asks first.
+class _LocationFacts extends StatelessWidget {
+  const _LocationFacts(this.r);
+  final Report r;
+
+  @override
+  Widget build(BuildContext context) {
+    final lat = r.lat, lng = r.lng;
+    Widget row(String k, String? v, {bool strong = false}) => v == null || v.isEmpty
+        ? const SizedBox.shrink()
+        : Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SizedBox(width: 108, child: Text(k, style: const TextStyle(color: muted, fontSize: 13.5))),
+              Expanded(child: strong ? Text(v, style: display(28, h: 1)) : Text(v, style: const TextStyle(fontWeight: FontWeight.w600, height: 1.3))),
+            ]),
+          );
+    String day(String key) {
+      final t = DateTime.tryParse('${r.json[key]}')?.toLocal();
+      if (t == null) return '';
+      return '${t.day.toString().padLeft(2, '0')}/${t.month.toString().padLeft(2, '0')}/${t.year}';
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Location and details', style: display(28)),
+      const SizedBox(height: 6),
+      FutureBuilder<Address?>(
+        future: lat == null || lng == null ? Future.value(null) : Api.instance.address(lat, lng),
+        builder: (_, s) {
+          final a = s.data;
+          return Column(children: [
+            if (s.connectionState != ConnectionState.done) const Padding(padding: EdgeInsets.symmetric(vertical: 6), child: Skeleton(height: 28, radius: 6)),
+            row('PIN code', a?.pin, strong: true),
+            row('State', a?.state),
+            row('District', a?.district),
+            row('City', a?.city),
+            row('Area', a?.area),
+            row('Road', a?.road),
+          ]);
+        },
+      ),
+      row('Ward', r.ward),
+      if (lat != null && lng != null) row('Coordinates', '${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}'),
+      row('Report no.', r.code),
+      row('Reported on', day('created_at')),
+      row('Repair due', day('due_at')),
+      row('Crew', r.assignee ?? 'Not assigned yet'),
+      row('Citizens', '${r.reportedCount}'),
+    ]);
   }
 }
