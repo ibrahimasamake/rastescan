@@ -270,7 +270,8 @@ class _HeroState extends State<_Hero> with SingleTickerProviderStateMixin {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(
           height: photoH,
-          child: Stack(fit: StackFit.expand, clipBehavior: Clip.hardEdge, children: [
+          // ClipRect, not Stack.clipBehavior: the slow push-in scales the photo, and a Stack does not count that as overflow.
+          child: ClipRect(child: Stack(fit: StackFit.expand, children: [
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 1100),
               child: r == null
@@ -308,7 +309,7 @@ class _HeroState extends State<_Hero> with SingleTickerProviderStateMixin {
                   ),
               ]),
             ),
-          ]),
+          ])),
         ),
         // the dashed lane line is the scene timer
         AnimatedBuilder(animation: clock, builder: (_, __) => Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: SizedBox(height: 4, child: LaneLine(progress: clock.value, thickness: 4)))),

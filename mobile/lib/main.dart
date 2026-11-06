@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'pages/home.dart';
+import 'pages/intro.dart';
 import 'pages/map.dart';
 import 'pages/mine.dart';
 import 'pages/reports.dart';
@@ -21,7 +22,7 @@ class RasteScanApp extends StatelessWidget {
         title: 'RasteScan',
         debugShowCheckedModeBanner: false,
         theme: buildTheme(),
-        home: const Shell(),
+        home: const Stack(fit: StackFit.expand, children: [Shell(), IntroFilm()]),
       );
 }
 

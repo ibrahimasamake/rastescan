@@ -169,7 +169,7 @@ class BigButton extends StatelessWidget {
                   onTap!();
                 },
           icon: icon == null ? const SizedBox.shrink() : Icon(icon, size: 22),
-          label: Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, letterSpacing: -.1))),
+          label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, letterSpacing: -.1)),
           style: FilledButton.styleFrom(
             backgroundColor: light ? Colors.white.withValues(alpha: .10) : saffron,
             foregroundColor: light ? Colors.white : navy,
