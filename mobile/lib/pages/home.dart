@@ -18,196 +18,224 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final api = Api.instance;
   late Future<Stats> stats = api.stats();
-  late Future<List<Report>> worst = api.reports(sort: 'urgency', perPage: 8).then((p) => p.items.where((r) => r.photoUrl.isNotEmpty).toList());
+  late Future<List<Report>> worst = _worst();
   late Future<List<Activity>> activity = api.activity();
   late Future<List<Report>> resolved = api.recentlyResolved();
+
+  // The list rows do not carry the AI's boxes, so fetch each report's detail: the hero and cards then show the frame on the damage.
+  Future<List<Report>> _worst() async {
+    final page = await api.reports(sort: 'urgency', perPage: 8);
+    final full = await Future.wait(page.items.where((r) => r.photoUrl.isNotEmpty).map((r) => api.report(r.code).catchError((_) => r)));
+    return full;
+  }
 
   Future<void> refresh() async {
     setState(() {
       stats = api.stats();
-      worst = api.reports(sort: 'urgency', perPage: 8).then((p) => p.items.where((r) => r.photoUrl.isNotEmpty).toList());
+      worst = _worst();
       activity = api.activity();
       resolved = api.recentlyResolved();
     });
-    await Future.wait([stats, worst]).catchError((_) => <Object>[]);
+    await worst.catchError((_) => <Report>[]);
   }
 
-  void open(Report r) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DetailPage(code: r.code)));
+  void open(String code) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DetailPage(code: code)));
 
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: refresh,
-      child: ListView(padding: EdgeInsets.zero, children: [
-        _Hero(worst: worst, stats: stats, onReport: widget.onReport, onMap: () => widget.onTab(3)),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _Head('Live activity', null, null),
-            FutureBuilder<List<Activity>>(
-              future: activity,
-              builder: (_, s) {
-                if (!s.hasData) return const SizedBox(height: 60, child: Center(child: CircularProgressIndicator()));
-                return Card(
-                  elevation: 0,
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                  child: Column(children: [
-                    for (final a in s.data!.take(6))
-                      ListTile(
-                        dense: true,
-                        leading: Icon(_icon(a.event), size: 20, color: navy),
-                        title: Text(_text(a), style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text('${a.code} · ${a.ward ?? ''} ${ago(a.at)}'),
-                        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DetailPage(code: a.code))),
-                      ),
-                  ]),
-                );
-              },
-            ),
-            const SizedBox(height: 28),
-            _Head('Impact', 'See all', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ImpactPage()))),
-            _ImpactTeaser(onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ImpactPage()))),
-            const SizedBox(height: 28),
-            _Head('Recently fixed', null, null),
-          ]),
-        ),
+      color: navy,
+      child: ListView(padding: const EdgeInsets.only(bottom: 110), children: [
+        _Hero(worst: worst, stats: stats, onReport: widget.onReport, onMap: () => widget.onTab(3), onOpen: open),
+        const SizedBox(height: 30),
+        _Section('Worst right now', action: 'All reports', onTap: () => widget.onTab(1)),
         SizedBox(
           height: 300,
           child: FutureBuilder<List<Report>>(
-            future: resolved,
+            future: worst,
             builder: (_, s) {
-              if (!s.hasData) return const Center(child: CircularProgressIndicator());
-              if (s.data!.isEmpty) return const Center(child: Text('Nothing fixed yet. Be the first to report.'));
+              if (!s.hasData) return ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 18), children: const [Skeleton(height: 300, width: 200, radius: 22), SizedBox(width: 12), Skeleton(height: 300, width: 200, radius: 22)]);
               return ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 itemCount: s.data!.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (_, i) => SizedBox(width: 180, child: ReportCard(s.data![i], onTap: () => open(s.data![i]))),
+                itemBuilder: (_, i) => SizedBox(width: 205, child: ReportCard(s.data![i], onTap: () => open(s.data![i].code))),
               );
             },
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 28, 16, 36),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _Head('How it works', null, null),
-            const _Step(1, 'Take a photo', 'Stand safely and photograph the damage. The app adds your location.'),
-            const _Step(2, 'AI inspects it', 'It blurs faces and plates, finds the damage, measures it and scores how dangerous it is.'),
-            const _Step(3, 'The ward fixes it', 'It joins a ranked repair list. You follow it until the after-photo proves the fix.'),
-          ]),
+        const SizedBox(height: 34),
+        _Section('Public money, public roads', action: 'Impact', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ImpactPage()))),
+        const _ImpactStrip(),
+        const SizedBox(height: 34),
+        const _Section('Happening now'),
+        _Feed(activity: activity, onOpen: open),
+        const SizedBox(height: 34),
+        const _Section('Fixed and proven'),
+        SizedBox(
+          height: 270,
+          child: FutureBuilder<List<Report>>(
+            future: resolved,
+            builder: (_, s) {
+              if (!s.hasData) return const SizedBox.shrink();
+              if (s.data!.isEmpty) return const Padding(padding: EdgeInsets.symmetric(horizontal: 18), child: Text('Nothing fixed yet. The first repair will show its before and after photos here.', style: TextStyle(color: muted, height: 1.4)));
+              return ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                itemCount: s.data!.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (_, i) => SizedBox(width: 190, child: ReportCard(s.data![i], onTap: () => open(s.data![i].code))),
+              );
+            },
+          ),
         ),
+        const SizedBox(height: 34),
+        const _Section('How a report moves'),
+        const _Route(),
       ]),
     );
   }
-
-  IconData _icon(String e) => switch (e) {
-        'reported' => Icons.add_a_photo_outlined,
-        'ai_assessed' => Icons.auto_awesome,
-        'assigned' => Icons.assignment_ind_outlined,
-        'repair_photo' => Icons.build_circle_outlined,
-        'duplicate_added' => Icons.people_outline,
-        _ => Icons.sync,
-      };
-
-  String _text(Activity a) => switch (a.event) {
-        'reported' => 'New report: ${a.hazard}',
-        'ai_assessed' => 'AI rated ${a.hazard}',
-        'assigned' => 'Assigned to a crew',
-        'repair_photo' => 'Repair photo added',
-        'duplicate_added' => 'Another citizen confirmed it',
-        _ => 'Status updated',
-      };
 }
 
-class _Head extends StatelessWidget {
-  const _Head(this.title, this.action, this.onTap);
+class _Section extends StatelessWidget {
+  const _Section(this.title, {this.action, this.onTap});
   final String title;
   final String? action;
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Row(children: [
-          Expanded(child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 22))),
-          if (action != null) TextButton(onPressed: onTap, child: Text(action!)),
+        padding: const EdgeInsets.fromLTRB(18, 0, 10, 12),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Expanded(child: Text(title, style: display(30, h: 1.05))),
+          if (action != null)
+            TextButton(onPressed: onTap, style: TextButton.styleFrom(foregroundColor: navy, textStyle: const TextStyle(fontWeight: FontWeight.w800, decoration: TextDecoration.underline, decorationColor: saffron, decorationThickness: 3)), child: Text(action!)),
         ]),
       );
 }
 
-class _Step extends StatelessWidget {
-  const _Step(this.n, this.title, this.text);
-  final int n;
-  final String title, text;
-  @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 38,
-            height: 38,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [Color(0xFFFF9A4D), Color(0xFFFF6B5A)])),
-            child: Text('$n', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17)),
-          ),
-          const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-            const SizedBox(height: 3),
-            Text(text, style: const TextStyle(color: Colors.black54, height: 1.4)),
-          ])),
-        ]),
-      );
-}
-
-class _ImpactTeaser extends StatelessWidget {
-  const _ImpactTeaser({required this.onTap});
-  final VoidCallback onTap;
+class _ImpactStrip extends StatelessWidget {
+  const _ImpactStrip();
   @override
   Widget build(BuildContext context) => FutureBuilder<Impact>(
         future: Api.instance.impact(),
         builder: (_, s) {
           final i = s.data;
-          Widget cell(String v, String l) => Expanded(
+          Widget cell(String v, String l, Color c) => Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(v, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -.8)),
-                  Text(l, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                  Text(v, style: display(34, color: c, h: 1)),
+                  const SizedBox(height: 3),
+                  Text(l, style: const TextStyle(color: muted, fontSize: 12, height: 1.25)),
                 ]),
               );
-          return InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(18),
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
-              child: i == null
-                  ? const SizedBox(height: 50, child: Center(child: CircularProgressIndicator()))
-                  : Row(children: [
-                      cell(inr(i.repairedInr), 'repaired value'),
-                      cell(inr(i.backlogInr), 'open backlog'),
-                      cell(i.onTime == null ? '–' : '${i.onTime!.round()}%', 'on time'),
-                    ]),
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 18),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            decoration: BoxDecoration(color: paper, borderRadius: BorderRadius.circular(22), border: Border.all(color: hair)),
+            child: i == null
+                ? const Skeleton(height: 60, radius: 10)
+                : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    cell(inr(i.repairedInr), 'repairs done', ok),
+                    const SizedBox(width: 10),
+                    cell(inr(i.backlogInr), 'still waiting', bad),
+                    const SizedBox(width: 10),
+                    cell(i.onTime == null ? '–' : '${i.onTime!.round()}%', 'fixed on time', navy),
+                  ]),
+          );
+        },
+      );
+}
+
+class _Feed extends StatelessWidget {
+  const _Feed({required this.activity, required this.onOpen});
+  final Future<List<Activity>> activity;
+  final void Function(String) onOpen;
+
+  String _text(Activity a) => switch (a.event) {
+        'reported' => 'New ${a.hazard.toLowerCase()} reported',
+        'ai_assessed' => 'AI rated a ${a.hazard.toLowerCase()}',
+        'assigned' => 'Crew assigned',
+        'repair_photo' => 'Repair photo added',
+        'duplicate_added' => 'Another citizen confirmed it',
+        _ => 'Status updated',
+      };
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<Activity>>(
+        future: activity,
+        builder: (_, s) {
+          if (!s.hasData) return const Padding(padding: EdgeInsets.symmetric(horizontal: 18), child: Skeleton(height: 120));
+          final list = s.data!.take(5).toList();
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                const SizedBox(width: 6, child: Padding(padding: EdgeInsets.symmetric(vertical: 6), child: LaneLine(vertical: true, dash: 10, gap: 8, thickness: 3))),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(children: [
+                    for (final a in list)
+                      InkWell(
+                        onTap: () => onOpen(a.code),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          child: Row(children: [
+                            Expanded(child: Text(_text(a), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
+                            Text(ago(a.at), style: const TextStyle(color: muted, fontSize: 12)),
+                          ]),
+                        ),
+                      ),
+                  ]),
+                ),
+              ]),
             ),
           );
         },
       );
 }
 
-/// Full-bleed cinematic banner: the worst live reports cross-fade with a slow push-in, the AI box is drawn on each.
+class _Route extends StatelessWidget {
+  const _Route();
+  @override
+  Widget build(BuildContext context) {
+    Widget row(IconData i, String t, String d) => Padding(
+          padding: const EdgeInsets.only(bottom: 22),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(width: 44, height: 44, decoration: BoxDecoration(color: navy, borderRadius: BorderRadius.circular(14)), child: Icon(i, color: saffron, size: 22)),
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(t, style: display(23, h: 1.1)),
+              const SizedBox(height: 2),
+              Text(d, style: const TextStyle(color: muted, height: 1.4)),
+            ])),
+          ]),
+        );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: Column(children: [
+        row(Icons.photo_camera_rounded, 'Photograph it', 'Stand safely. The app adds your location. No account needed.'),
+        row(Icons.center_focus_strong_rounded, 'The AI inspects it', 'Faces and plates are blurred, the damage is measured and scored.'),
+        row(Icons.engineering_rounded, 'A crew fixes it', 'It joins a ranked repair list. An after photo proves the fix.'),
+      ]),
+    );
+  }
+}
+
+/// Full-bleed opening: the worst live reports cross-fade under a slow push-in, with the AI's frame on each.
 class _Hero extends StatefulWidget {
-  const _Hero({required this.worst, required this.stats, required this.onReport, required this.onMap});
+  const _Hero({required this.worst, required this.stats, required this.onReport, required this.onMap, required this.onOpen});
   final Future<List<Report>> worst;
   final Future<Stats> stats;
   final VoidCallback onReport, onMap;
+  final void Function(String) onOpen;
   @override
   State<_Hero> createState() => _HeroState();
 }
 
 class _HeroState extends State<_Hero> with SingleTickerProviderStateMixin {
-  late final AnimationController push = AnimationController(vsync: this, duration: const Duration(seconds: 6))..forward();
+  static const sceneSeconds = 6;
+  late final AnimationController clock = AnimationController(vsync: this, duration: const Duration(seconds: sceneSeconds))..forward();
   Timer? timer;
   int i = 0;
   List<Report> items = [];
@@ -216,20 +244,19 @@ class _HeroState extends State<_Hero> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     widget.worst.then((v) {
-      if (!mounted) return;
-      setState(() => items = v);
+      if (mounted) setState(() => items = v);
     }).catchError((_) {});
-    timer = Timer.periodic(const Duration(seconds: 6), (_) {
+    timer = Timer.periodic(const Duration(seconds: sceneSeconds), (_) {
       if (!mounted || items.isEmpty) return;
       setState(() => i = (i + 1) % items.length);
-      push.forward(from: 0);
+      clock.forward(from: 0);
     });
   }
 
   @override
   void dispose() {
     timer?.cancel();
-    push.dispose();
+    clock.dispose();
     super.dispose();
   }
 
@@ -237,161 +264,105 @@ class _HeroState extends State<_Hero> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
     final r = items.isEmpty ? null : items[i % items.length];
+    final photoH = 330.0 + top;
     return Container(
       color: navy,
-      child: Stack(children: [
-        // photo band
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(
-          height: 420 + top,
-          width: double.infinity,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 1200),
-            child: r == null
-                ? Container(key: const ValueKey('none'), color: navy2)
-                : AnimatedBuilder(
-                    key: ValueKey(r.code),
-                    animation: push,
-                    builder: (_, __) => Transform.scale(
-                      scale: 1.02 + .12 * push.value,
-                      child: BoxedPhoto(url: r.photoUrl, detections: r.detections.take(1).toList(), aspect: MediaQuery.of(context).size.width / (420 + top), showLabels: true),
+          height: photoH,
+          child: Stack(fit: StackFit.expand, children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 1100),
+              child: r == null
+                  ? Container(key: const ValueKey('none'), color: navy2)
+                  : AnimatedBuilder(
+                      key: ValueKey(r.code),
+                      animation: clock,
+                      builder: (_, __) => Transform.scale(
+                        scale: 1.02 + .1 * clock.value,
+                        child: BoxedPhoto(url: r.photoUrl, detections: r.detections.take(1).toList(), aspect: MediaQuery.of(context).size.width / photoH),
+                      ),
+                    ),
+            ),
+            const IgnorePointer(
+              child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, stops: [0, .22, .6, 1], colors: [Color(0x99000000), Color(0x00000000), Color(0x55141619), navy]))),
+            ),
+            Positioned(
+              top: top + 12,
+              left: 18,
+              right: 18,
+              child: Row(children: [
+                Container(width: 30, height: 30, decoration: BoxDecoration(color: saffron, borderRadius: BorderRadius.circular(9)), child: const Icon(Icons.center_focus_strong_rounded, size: 19, color: navy)),
+                const SizedBox(width: 9),
+                Text('RasteScan', style: display(26, color: Colors.white)),
+                const Spacer(),
+                if (r != null)
+                  GestureDetector(
+                    onTap: () => widget.onOpen(r.code),
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 180),
+                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                      decoration: BoxDecoration(color: const Color(0x99141619), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white24)),
+                      child: Text('${r.hazard} · ${r.ward ?? r.code}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w700)),
                     ),
                   ),
-          ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 0,
-          height: 420 + top,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, stops: const [0, .25, .6, 1], colors: [
-                  navy.withValues(alpha: .6),
-                  navy.withValues(alpha: 0),
-                  navy.withValues(alpha: .55),
-                  navy,
-                ]),
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(20, top + 14, 20, 24),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              const Icon(Icons.route, color: saffron),
-              const SizedBox(width: 8),
-              const Text('RasteScan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18, letterSpacing: -.3)),
-              const Spacer(),
-              if (r != null)
-                Container(
-                  constraints: const BoxConstraints(maxWidth: 190),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(color: navy.withValues(alpha: .55), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white24)),
-                  child: Text('${r.hazard} · ${r.ward ?? r.code}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
-                ),
-            ]),
-            const SizedBox(height: 230),
-            Container(
-              padding: const EdgeInsets.fromLTRB(10, 6, 14, 6),
-              decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(99), border: Border.all(color: Colors.white24)),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                _LiveDot(),
-                SizedBox(width: 8),
-                Text('The real problem on our roads', style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600)),
               ]),
             ),
-            const SizedBox(height: 14),
-            const _Headline(),
-            const SizedBox(height: 12),
-            const Text('Send a photo. Our AI inspector checks how dangerous it is and the ward office sees it in a ranked list. Everyone can follow the repair until it is fixed.',
-                style: TextStyle(color: Colors.white70, height: 1.5, fontSize: 15)),
-            const SizedBox(height: 20),
-            SizedBox(width: double.infinity, child: BigButton('Report a road problem', icon: Icons.photo_camera, onTap: widget.onReport)),
-            const SizedBox(height: 10),
-            SizedBox(width: double.infinity, child: BigButton('Watch the live map', icon: Icons.map_outlined, light: true, onTap: widget.onMap)),
-            const SizedBox(height: 6),
-            const Padding(padding: EdgeInsets.only(top: 6), child: Text('Takes under 30 seconds. No account needed.', style: TextStyle(color: Colors.white54, fontSize: 12.5))),
-            const SizedBox(height: 22),
-            FutureBuilder<Stats>(
-              future: widget.stats,
-              builder: (_, s) {
-                final d = s.data;
-                Widget cell(int? v, String l, {bool warn = false}) => Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0, end: (v ?? 0).toDouble()),
-                          duration: const Duration(milliseconds: 1600),
-                          curve: Curves.easeOutCubic,
-                          builder: (_, x, __) => Text(d == null ? '–' : '${x.round()}',
-                              style: TextStyle(color: warn ? const Color(0xFFFF9D8C) : Colors.white, fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -1)),
-                        ),
-                        Text(l, style: const TextStyle(color: Colors.white60, fontSize: 11.5)),
-                      ]),
-                    );
-                return Container(
-                  padding: const EdgeInsets.only(top: 16),
-                  decoration: const BoxDecoration(border: Border(top: BorderSide(color: Colors.white24))),
-                  child: Row(children: [
-                    cell(d?.today, 'Reported today'),
-                    cell(d?.open, 'Open now'),
-                    cell(d?.overdue, 'Past deadline', warn: true),
-                    cell(d?.resolvedMonth, 'Fixed (month)'),
-                  ]),
-                );
-              },
-            ),
           ]),
+        ),
+        // the dashed lane line is the scene timer
+        AnimatedBuilder(animation: clock, builder: (_, __) => Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: SizedBox(height: 4, child: LaneLine(progress: clock.value, thickness: 4)))),
+        const SizedBox(height: 18),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, 22 * (1 - v)), child: child)),
+            child: Text('Is there a pothole, open manhole or broken road near you?', style: display(46, color: Colors.white, h: .98, ls: -.6)),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(18, 14, 40, 0),
+          child: Text('Send one photo. An AI inspector scores the danger, the ward office gets a ranked repair list, and you can watch it get fixed.', style: TextStyle(color: Color(0xFFB9BDC4), height: 1.5, fontSize: 15.5)),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
+          child: Row(children: [
+            Expanded(flex: 6, child: BigButton('Report a problem', icon: Icons.photo_camera_rounded, onTap: widget.onReport)),
+            const SizedBox(width: 10),
+            Expanded(flex: 3, child: BigButton('Map', icon: Icons.map_outlined, light: true, onTap: widget.onMap)),
+          ]),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 26, 18, 30),
+          child: FutureBuilder<Stats>(
+            future: widget.stats,
+            builder: (_, s) {
+              final d = s.data;
+              Widget cell(int? v, String l, {bool warn = false}) => Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: (v ?? 0).toDouble()),
+                        duration: const Duration(milliseconds: 1500),
+                        curve: Curves.easeOutCubic,
+                        builder: (_, x, __) => Text(d == null ? '–' : '${x.round()}', style: display(38, color: warn ? const Color(0xFFFF8F80) : Colors.white, h: 1)),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(l, style: const TextStyle(color: Color(0xFF9BA0A8), fontSize: 11.5)),
+                    ]),
+                  );
+              return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                cell(d?.today, 'today'),
+                cell(d?.open, 'open'),
+                cell(d?.overdue, 'overdue', warn: true),
+                cell(d?.resolvedMonth, 'fixed in a month'),
+              ]);
+            },
+          ),
         ),
       ]),
     );
   }
-}
-
-class _Headline extends StatelessWidget {
-  const _Headline();
-  @override
-  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: 1),
-        duration: const Duration(milliseconds: 900),
-        curve: Curves.easeOutCubic,
-        builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, 24 * (1 - v)), child: child)),
-        child: RichText(
-          text: TextSpan(
-            style: const TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w800, letterSpacing: -1.8, height: 1.04),
-            children: [
-              const TextSpan(text: 'Is there a pothole, open manhole or broken road '),
-              const TextSpan(text: 'near you?', style: TextStyle(color: Color(0xFFFFB45E))),
-            ],
-          ),
-        ),
-      );
-}
-
-class _LiveDot extends StatefulWidget {
-  const _LiveDot();
-  @override
-  State<_LiveDot> createState() => _LiveDotState();
-}
-
-class _LiveDotState extends State<_LiveDot> with SingleTickerProviderStateMixin {
-  late final c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat();
-  @override
-  void dispose() {
-    c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-        animation: c,
-        builder: (_, __) => Container(
-          width: 9,
-          height: 9,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFFFF4D3D), boxShadow: [
-            BoxShadow(color: const Color(0xFFFF4D3D).withValues(alpha: 1 - c.value), blurRadius: 0, spreadRadius: 9 * c.value),
-          ]),
-        ),
-      );
 }

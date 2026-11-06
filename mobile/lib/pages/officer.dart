@@ -68,7 +68,7 @@ class _LoginState extends State<_Login> {
   @override
   Widget build(BuildContext context) {
     InputDecoration deco(String l, IconData i) => InputDecoration(
-        labelText: l, prefixIcon: Icon(i), filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none));
+        labelText: l, prefixIcon: Icon(i), filled: true, fillColor: paper, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none));
     return Scaffold(
       appBar: AppBar(title: const Text('Officer sign in')),
       body: ListView(padding: const EdgeInsets.all(20), children: [
@@ -77,7 +77,7 @@ class _LoginState extends State<_Login> {
         const SizedBox(height: 10),
         Text('Ward and city staff', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 26)),
         const SizedBox(height: 6),
-        const Text('Sign in to work the ranked repair queue.', style: TextStyle(color: Colors.black54)),
+        const Text('Sign in to work the ranked repair queue.', style: TextStyle(color: muted)),
         const SizedBox(height: 22),
         TextField(controller: email, keyboardType: TextInputType.emailAddress, autocorrect: false, decoration: deco('Email', Icons.mail_outline)),
         const SizedBox(height: 12),
@@ -193,7 +193,7 @@ class _QueuePageState extends State<QueuePage> with SingleTickerProviderStateMix
                 itemBuilder: (_, i) {
                   final r = items[i];
                   return Material(
-                    color: Colors.white,
+                    color: paper,
                     borderRadius: BorderRadius.circular(16),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
@@ -206,7 +206,7 @@ class _QueuePageState extends State<QueuePage> with SingleTickerProviderStateMix
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Row(children: [Expanded(child: Text(r.hazard, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))), UrgencyPill(r.urgency)]),
                               const SizedBox(height: 3),
-                              Text('${r.code} · ${r.ward ?? 'no ward'} · ${ago(r.createdAt)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 12.5)),
+                              Text('${r.code} · ${r.ward ?? 'no ward'} · ${ago(r.createdAt)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: muted, fontSize: 12.5)),
                               const SizedBox(height: 7),
                               Wrap(spacing: 6, children: [
                                 Pill('AI ${r.severity.toStringAsFixed(1)}', color: const Color(0xFFEAF0F7), fg: navy),
@@ -331,7 +331,7 @@ class _OfficerReportPageState extends State<OfficerReportPage> {
                 const SizedBox(height: 14),
                 Row(children: [Expanded(child: Text(rep.hazard, style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w800, letterSpacing: -.7))), UrgencyPill(rep.urgency)]),
                 const SizedBox(height: 4),
-                Text('${rep.ward ?? 'No ward'} · ${ago(rep.createdAt)} · ${rep.reportedCount} citizen${rep.reportedCount == 1 ? '' : 's'}', style: const TextStyle(color: Colors.black54)),
+                Text('${rep.ward ?? 'No ward'} · ${ago(rep.createdAt)} · ${rep.reportedCount} citizen${rep.reportedCount == 1 ? '' : 's'}', style: const TextStyle(color: muted)),
                 const SizedBox(height: 10),
                 Wrap(spacing: 8, runSpacing: 6, children: [
                   Pill('Status: ${rep.status}', color: navy),
@@ -370,7 +370,7 @@ class _OfficerReportPageState extends State<OfficerReportPage> {
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                  decoration: BoxDecoration(color: paper, borderRadius: BorderRadius.circular(16)),
                   child: Column(children: [
                     for (final h in ((rep.json['history'] as List?) ?? rep.timeline).reversed.take(15))
                       Padding(
@@ -379,7 +379,7 @@ class _OfficerReportPageState extends State<OfficerReportPage> {
                           const Padding(padding: EdgeInsets.only(top: 5), child: Icon(Icons.circle, size: 8, color: saffron)),
                           const SizedBox(width: 10),
                           Expanded(child: Text('${h['event']}${h['new_value'] != null ? ': ${h['new_value']}' : ''}  · ${h['actor']}', style: const TextStyle(height: 1.3))),
-                          Text(ago(DateTime.tryParse('${h['at']}')?.toLocal() ?? DateTime.now()), style: const TextStyle(color: Colors.black45, fontSize: 12)),
+                          Text(ago(DateTime.tryParse('${h['at']}')?.toLocal() ?? DateTime.now()), style: const TextStyle(color: muted, fontSize: 12)),
                         ]),
                       ),
                   ]),

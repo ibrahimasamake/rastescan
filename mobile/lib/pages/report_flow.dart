@@ -125,7 +125,7 @@ class _ReportFlowState extends State<ReportFlow> {
             child: photo != null
                 ? Stack(fit: StackFit.expand, children: [
                     Image.memory(photo!, fit: BoxFit.cover),
-                    Positioned(right: 10, top: 10, child: IconButton.filled(style: IconButton.styleFrom(backgroundColor: Colors.black54), onPressed: () => setState(() => photo = null), icon: const Icon(Icons.close))),
+                    Positioned(right: 10, top: 10, child: IconButton.filled(style: IconButton.styleFrom(backgroundColor: muted), onPressed: () => setState(() => photo = null), icon: const Icon(Icons.close))),
                   ])
                 : InkWell(
                     onTap: () => _pick(ImageSource.camera),
@@ -136,7 +136,7 @@ class _ReportFlowState extends State<ReportFlow> {
                         SizedBox(height: 10),
                         Text('Tap to take a photo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                         SizedBox(height: 4),
-                        Text('Stand safely off the road.\nShow the whole damage.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
+                        Text('Stand safely off the road.\nShow the whole damage.', textAlign: TextAlign.center, style: TextStyle(color: muted)),
                       ]),
                     ),
                   ),
@@ -151,9 +151,9 @@ class _ReportFlowState extends State<ReportFlow> {
         const SizedBox(height: 14),
         Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+          decoration: BoxDecoration(color: paper, borderRadius: BorderRadius.circular(14)),
           child: Row(children: [
-            Icon(pos != null ? Icons.my_location : Icons.location_searching, color: pos != null ? const Color(0xFF17663A) : Colors.black45),
+            Icon(pos != null ? Icons.my_location : Icons.location_searching, color: pos != null ? const Color(0xFF17663A) : muted),
             const SizedBox(width: 10),
             Expanded(child: Text(locNote)),
             if (pos == null) TextButton(onPressed: _locate, child: const Text('Retry')),
@@ -168,12 +168,12 @@ class _ReportFlowState extends State<ReportFlow> {
             labelText: 'Note (optional)',
             hintText: 'For example: near the bus stop',
             filled: true,
-            fillColor: Colors.white,
+            fillColor: paper,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
           ),
         ),
         const SizedBox(height: 4),
-        const Text('Faces and number plates are blurred before the photo is stored. Your exact device is never shown publicly.', style: TextStyle(color: Colors.black54, fontSize: 12.5)),
+        const Text('Faces and number plates are blurred before the photo is stored. Your exact device is never shown publicly.', style: TextStyle(color: muted, fontSize: 12.5)),
         const SizedBox(height: 16),
         SizedBox(width: double.infinity, child: BigButton('Send report', icon: Icons.send, onTap: photo == null ? null : _send)),
         const SizedBox(height: 24),
@@ -498,7 +498,7 @@ class _ResultView extends StatelessWidget {
               _Card(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Expanded(child: Text(r.hazard, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -.6))),
+                  Expanded(child: Text(r.hazard, style: display(44, h: 1))),
                   UrgencyPill(r.urgency),
                 ]),
                 const SizedBox(height: 12),
@@ -545,5 +545,5 @@ class _Card extends StatelessWidget {
   const _Card({required this.child});
   final Widget child;
   @override
-  Widget build(BuildContext context) => Container(width: double.infinity, padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: child);
+  Widget build(BuildContext context) => Container(width: double.infinity, padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: paper, borderRadius: BorderRadius.circular(18)), child: child);
 }

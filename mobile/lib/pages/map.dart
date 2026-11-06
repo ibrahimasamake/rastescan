@@ -88,7 +88,7 @@ class _MapPageState extends State<MapPage> {
             onTap: (_, __) => setState(() => focus = null),
           ),
           children: [
-            TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'tech.rastescan.app'),
+            TileLayer(urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', subdomains: const ['a', 'b', 'c', 'd'], userAgentPackageName: 'tech.rastescan.app'),
             MarkerLayer(markers: [
               for (final r in items)
                 Marker(
@@ -113,7 +113,7 @@ class _MapPageState extends State<MapPage> {
                   ),
                 ),
             ]),
-            const RichAttributionWidget(attributions: [TextSourceAttribution('© OpenStreetMap contributors')]),
+            const RichAttributionWidget(attributions: [TextSourceAttribution('© OpenStreetMap contributors © CARTO')]),
           ],
         ),
         SafeArea(
@@ -122,7 +122,7 @@ class _MapPageState extends State<MapPage> {
             child: Row(children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(color: navy.withValues(alpha: .88), borderRadius: BorderRadius.circular(99)),
+                decoration: BoxDecoration(color: navy.withValues(alpha: .92), borderRadius: BorderRadius.circular(12)),
                 child: Text(loading ? 'Loading…' : '${items.length} open reports', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
               ),
               const Spacer(),
@@ -130,7 +130,7 @@ class _MapPageState extends State<MapPage> {
                 onPressed: _tour,
                 icon: Icon(touring ? Icons.stop : Icons.play_arrow),
                 label: Text(touring ? 'Stop tour' : 'Play tour'),
-                style: FilledButton.styleFrom(backgroundColor: saffron, foregroundColor: navy, shape: const StadiumBorder(), padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12)),
+                style: FilledButton.styleFrom(backgroundColor: saffron, foregroundColor: navy, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12)),
               ),
             ]),
           ),
@@ -142,7 +142,7 @@ class _MapPageState extends State<MapPage> {
           curve: Curves.easeOutCubic,
           left: 12,
           right: 12,
-          bottom: focus == null ? -280 : 12,
+          bottom: focus == null ? -280 : 96,
           child: focus == null ? const SizedBox(height: 1) : _Card(r: focus!),
         ),
       ]),
@@ -155,10 +155,10 @@ class _Card extends StatelessWidget {
   final Report r;
   @override
   Widget build(BuildContext context) => Material(
-        elevation: 8,
+        elevation: 10,
         borderRadius: BorderRadius.circular(22),
         clipBehavior: Clip.antiAlias,
-        color: Colors.white,
+        color: navy,
         child: InkWell(
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DetailPage(code: r.code))),
           child: Row(children: [
@@ -169,13 +169,13 @@ class _Card extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   UrgencyPill(r.urgency),
                   const SizedBox(height: 8),
-                  Text(r.hazard, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, letterSpacing: -.4)),
-                  Text(r.ward ?? r.code, style: const TextStyle(color: Colors.black54)),
+                  Text(r.hazard, style: display(30, color: Colors.white, h: 1)),
+                  Text(r.ward ?? r.code, style: const TextStyle(color: Color(0xFFB9BDC4))),
                   const SizedBox(height: 6),
-                  Text('AI severity ${r.severity.toStringAsFixed(1)} · ${ago(r.createdAt)}', style: const TextStyle(fontSize: 12.5)),
-                  if (r.costInr > 0) Text('Repair ${inr(r.costInr)}', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+                  Text('AI ${r.severity.toStringAsFixed(1)} · ${ago(r.createdAt)}', style: const TextStyle(fontSize: 12.5, color: Colors.white)),
+                  if (r.costInr > 0) Text('Repair ${inr(r.costInr)}', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white)),
                   const SizedBox(height: 6),
-                  const Text('Tap for details', style: TextStyle(color: saffron, fontWeight: FontWeight.w700, fontSize: 12.5)),
+                  const Text('Open report', style: TextStyle(color: saffron, fontWeight: FontWeight.w800, fontSize: 12.5)),
                 ]),
               ),
             ),

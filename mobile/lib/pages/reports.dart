@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../ui.dart';
 import 'detail.dart';
 
-/// All public reports as photo cards, worst first, with filters and endless scrolling.
+/// Every public report as a photo, worst first. Filters are plain text tabs with a lane-paint underline.
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
   @override
@@ -25,7 +26,7 @@ class _ReportsPageState extends State<ReportsPage> {
   void initState() {
     super.initState();
     scroll.addListener(() {
-      if (scroll.position.pixels > scroll.position.maxScrollExtent - 600) _more();
+      if (scroll.position.pixels > scroll.position.maxScrollExtent - 700) _more();
     });
     _reset();
   }
@@ -64,73 +65,84 @@ class _ReportsPageState extends State<ReportsPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('All reports')),
-      body: Column(children: [
-        Container(
-          color: navy,
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              for (final f in const [('open', 'Open'), ('resolved', 'Fixed'), ('all', 'All')])
-                _Chip(f.$2, status == f.$1, () {
-                  status = f.$1;
-                  _reset();
-                }),
-              const SizedBox(width: 10),
-              for (final f in const [('urgency', 'Most urgent'), ('newest', 'Newest')])
-                _Chip(f.$2, sort == f.$1, () {
-                  sort = f.$1;
-                  _reset();
-                }),
-            ]),
-          ),
-        ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: _reset,
-            child: items.isEmpty && !busy
-                ? ListView(children: [
-                    const SizedBox(height: 120),
-                    Center(child: Text(error != null ? 'Could not load reports. Pull down to retry.' : 'No reports here yet.')),
-                  ])
-                : GridView.builder(
-                    controller: scroll,
-                    padding: const EdgeInsets.all(12),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: .66),
-                    itemCount: items.length + (busy ? 1 : 0),
-                    itemBuilder: (_, i) => i >= items.length
-                        ? const Center(child: CircularProgressIndicator())
-                        : ReportCard(items[i], onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DetailPage(code: items[i].code)))),
-                  ),
-          ),
-        ),
-      ]),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip(this.label, this.on, this.tap);
-  final String label;
-  final bool on;
-  final VoidCallback tap;
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(right: 8),
-        child: ChoiceChip(
-          label: Text(label),
-          selected: on,
-          onSelected: (_) => tap(),
-          showCheckmark: false,
-          labelStyle: TextStyle(color: on ? navy : Colors.white, fontWeight: FontWeight.w700),
-          backgroundColor: Colors.white12,
-          selectedColor: Colors.white,
-          side: BorderSide.none,
-          shape: const StadiumBorder(),
+  Widget _tab(String label, bool on, VoidCallback tap) => Padding(
+        padding: const EdgeInsets.only(right: 22),
+        child: GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            tap();
+          },
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(label, style: display(22, color: on ? Colors.white : const Color(0xFF8D929A), h: 1.1)),
+            const SizedBox(height: 4),
+            AnimatedContainer(duration: const Duration(milliseconds: 200), height: 3, width: on ? 26 : 0, color: saffron),
+          ]),
         ),
       );
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.of(context).padding.top;
+    return Column(children: [
+      Container(
+        color: navy,
+        padding: EdgeInsets.fromLTRB(18, top + 14, 18, 14),
+        width: double.infinity,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('All reports', style: display(40, color: Colors.white)),
+          const SizedBox(height: 2),
+          Text(total == 0 ? 'Loading the list…' : '$total on the public list', style: const TextStyle(color: Color(0xFF9BA0A8))),
+          const SizedBox(height: 14),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              _tab('Open', status == 'open', () {
+                status = 'open';
+                _reset();
+              }),
+              _tab('Fixed', status == 'resolved', () {
+                status = 'resolved';
+                _reset();
+              }),
+              _tab('All', status == 'all', () {
+                status = 'all';
+                _reset();
+              }),
+              const SizedBox(width: 10),
+              Container(width: 1, height: 22, color: Colors.white24),
+              const SizedBox(width: 22),
+              _tab('Most urgent', sort == 'urgency', () {
+                sort = 'urgency';
+                _reset();
+              }),
+              _tab('Newest', sort == 'newest', () {
+                sort = 'newest';
+                _reset();
+              }),
+            ]),
+          ),
+        ]),
+      ),
+      Expanded(
+        child: RefreshIndicator(
+          onRefresh: _reset,
+          color: navy,
+          child: items.isEmpty && !busy
+              ? ListView(children: [
+                  const SizedBox(height: 120),
+                  Center(child: Text(error != null ? 'Could not load reports. Pull down to retry.' : 'No reports here yet.', style: const TextStyle(color: muted))),
+                ])
+              : GridView.builder(
+                  controller: scroll,
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 110),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: .72),
+                  itemCount: items.isEmpty ? 6 : items.length + (busy ? 2 : 0),
+                  itemBuilder: (_, i) => i >= items.length
+                      ? const Skeleton(height: 300, radius: 22)
+                      : ReportCard(items[i], onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DetailPage(code: items[i].code, heroPhoto: true)))),
+                ),
+        ),
+      ),
+    ]);
+  }
 }

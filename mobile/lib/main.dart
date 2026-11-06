@@ -58,18 +58,9 @@ class _ShellState extends State<Shell> {
       MinePage(key: _mineKey, onReport: openReport),
     ];
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(index: tab == 2 ? 0 : tab, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: tab,
-        onDestinationSelected: (i) => i == 2 ? openReport() : go(i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.grid_view_outlined), selectedIcon: Icon(Icons.grid_view), label: 'Reports'),
-          NavigationDestination(icon: Icon(Icons.add_a_photo, color: saffron), label: 'Report'),
-          NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map), label: 'Map'),
-          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Mine'),
-        ],
-      ),
+      bottomNavigationBar: FloatNav(index: tab, onTap: go, onReport: openReport),
     );
   }
 }

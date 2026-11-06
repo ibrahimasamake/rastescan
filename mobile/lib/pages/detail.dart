@@ -4,13 +4,14 @@ import '../api.dart';
 import '../ui.dart';
 
 class DetailPage extends StatelessWidget {
-  const DetailPage({super.key, required this.code});
+  const DetailPage({super.key, required this.code, this.heroPhoto = false});
   final String code;
+  final bool heroPhoto;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Report $code')),
+      backgroundColor: pageBg,
       body: Loader<Report>(load: () => Api.instance.report(code), builder: (c, r, reload) => _Body(r: r, reload: reload)),
     );
   }
@@ -34,7 +35,7 @@ class _BodyState extends State<_Body> {
       final n = await Api.instance.vote(widget.r.code);
       if (mounted) {
         setState(() => count = n);
-        toast(context, 'Thanks, your confirmation was added.');
+        toast(context, 'Added. $n citizens have confirmed this.');
       }
     } catch (e) {
       if (mounted) toast(context, e is ApiError && e.offline ? 'No connection.' : '$e');
@@ -48,68 +49,99 @@ class _BodyState extends State<_Body> {
     final r = widget.r;
     final est = r.estimate;
     final lines = ((est?['lines'] as List?) ?? []).whereType<Map>().toList();
+    final top = MediaQuery.of(context).padding.top;
+    final col = urgencyColor(r.urgency);
     return RefreshIndicator(
       onRefresh: widget.reload,
-      child: ListView(padding: const EdgeInsets.all(16), children: [
-        ClipRRect(borderRadius: BorderRadius.circular(22), child: BoxedPhoto(url: r.photoUrl, detections: r.detections)),
-        const SizedBox(height: 14),
-        Row(children: [
-          Expanded(child: Text(r.hazard, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -.8))),
-          UrgencyPill(r.urgency),
+      color: navy,
+      child: ListView(padding: EdgeInsets.zero, children: [
+        Stack(children: [
+          BoxedPhoto(url: r.photoUrl, detections: r.detections, aspect: 4 / 4.6),
+          const Positioned.fill(child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, stops: [0, .2, .7, 1], colors: [Color(0x99000000), Color(0x00000000), Color(0x00000000), Color(0xCC14161A)]))))),
+          Positioned(
+            top: top + 8,
+            left: 10,
+            child: Material(color: const Color(0x99141619), shape: const CircleBorder(), child: IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.arrow_back_rounded, color: Colors.white))),
+          ),
+          Positioned(top: top + 18, right: 16, child: Text(r.code, style: display(22, color: Colors.white))),
         ]),
-        const SizedBox(height: 4),
-        Text('${r.ward ?? 'Location pending'} · reported ${ago(r.createdAt)}${r.isDemo ? ' · demo' : ''}', style: const TextStyle(color: Colors.black54)),
-        const SizedBox(height: 12),
-        Wrap(spacing: 8, runSpacing: 6, children: [
-          Pill(statusLabel(r.publicStatus), color: navy),
-          Pill('AI severity ${r.severity.toStringAsFixed(1)}', color: const Color(0xFFEAF0F7), fg: navy),
-          if (r.overdue) const Pill('Past deadline', color: Color(0xFFA3161A)),
-          if (r.assignee != null) Pill('Crew: ${r.assignee}', color: const Color(0xFFEAF0F7), fg: navy, icon: Icons.engineering),
-        ]),
-        if (r.afterPhotoUrl != null) ...[
-          const SizedBox(height: 18),
-          const Text('After the repair', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-          const SizedBox(height: 8),
-          ClipRRect(borderRadius: BorderRadius.circular(18), child: BoxedPhoto(url: r.afterPhotoUrl!, aspect: 4 / 5)),
-        ],
-        if (r.recommendation != null && r.recommendation!.isNotEmpty) ...[
-          const SizedBox(height: 18),
-          _Section('What the AI recommends', Text(r.recommendation!, style: const TextStyle(height: 1.45))),
-        ],
-        if (est != null && (est['total_inr'] ?? 0) > 0) ...[
-          const SizedBox(height: 14),
-          _Section(
-              'Estimated repair cost',
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(inr(est['total_inr'] as num), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -1)),
-                Text('Materials ${inr((est['materials_inr'] ?? 0) as num)} · labour ${inr((est['labour_inr'] ?? 0) as num)} · ${(est['crew_hours'] ?? 0)} crew-hours', style: const TextStyle(color: Colors.black54, fontSize: 12.5)),
-                const SizedBox(height: 8),
-                for (final l in lines) Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: Row(children: [Expanded(child: Text('${l['item']}')), Text(inr((l['cost_inr'] ?? 0) as num))])),
-                const SizedBox(height: 6),
-                const Text('Indicative estimate from the measured size and depth.', style: TextStyle(color: Colors.black45, fontSize: 12)),
-              ])),
-        ],
-        const SizedBox(height: 14),
-        _Section(
-            'Progress',
-            Column(children: [
-              for (final e in r.timeline.reversed.take(12))
+        Container(
+          color: navy,
+          padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Expanded(child: Text(r.hazard, style: display(50, color: Colors.white, h: 1))),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text(r.severity.toStringAsFixed(1), style: display(50, color: col, h: 1)),
+                const Text('AI severity / 10', style: TextStyle(color: Color(0xFF9BA0A8), fontSize: 11)),
+              ]),
+            ]),
+            const SizedBox(height: 6),
+            Text('${r.ward ?? 'Location pending'} · reported ${ago(r.createdAt)}${r.isDemo ? ' · demo data' : ''}', style: const TextStyle(color: Color(0xFFB9BDC4))),
+            const SizedBox(height: 14),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              UrgencyPill(r.urgency),
+              Pill(statusLabel(r.publicStatus), color: Colors.white12),
+              if (r.overdue) const Pill('Overdue', color: bad),
+              if (r.assignee != null) Pill(r.assignee!, color: Colors.white12, icon: Icons.engineering),
+            ]),
+          ]),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 24, 18, 110),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (r.afterPhotoUrl != null) ...[
+              Text('After the repair', style: display(28)),
+              const SizedBox(height: 10),
+              ClipRRect(borderRadius: BorderRadius.circular(20), child: BoxedPhoto(url: r.afterPhotoUrl!)),
+              const SizedBox(height: 24),
+            ],
+            if (r.recommendation != null && r.recommendation!.isNotEmpty) ...[
+              Text('Recommended repair', style: display(28)),
+              const SizedBox(height: 6),
+              Text(r.recommendation!, style: const TextStyle(height: 1.5, fontSize: 15.5)),
+              const SizedBox(height: 24),
+            ],
+            if (est != null && (est['total_inr'] ?? 0) > 0) ...[
+              Text('Estimated cost', style: display(28)),
+              const SizedBox(height: 4),
+              Text(inr(est['total_inr'] as num), style: display(56, h: 1)),
+              Text('Materials ${inr((est['materials_inr'] ?? 0) as num)} + labour ${inr((est['labour_inr'] ?? 0) as num)} (${est['crew_hours']} crew-hours)', style: const TextStyle(color: muted, fontSize: 13)),
+              const SizedBox(height: 10),
+              for (final l in lines)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 5),
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Padding(padding: EdgeInsets.only(top: 5), child: Icon(Icons.circle, size: 9, color: saffron)),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text(_event(e), style: const TextStyle(height: 1.3))),
-                    Text(ago(DateTime.tryParse('${e['at']}')?.toLocal() ?? DateTime.now()), style: const TextStyle(color: Colors.black45, fontSize: 12)),
+                  child: Row(children: [Expanded(child: Text('${l['item']}')), Text(inr((l['cost_inr'] ?? 0) as num), style: const TextStyle(fontWeight: FontWeight.w700))]),
+                ),
+              const SizedBox(height: 6),
+              const Text('Indicative, from the size and depth the AI measured.', style: TextStyle(color: muted, fontSize: 12)),
+              const SizedBox(height: 24),
+            ],
+            Text('Progress', style: display(28)),
+            const SizedBox(height: 12),
+            IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                const SizedBox(width: 6, child: Padding(padding: EdgeInsets.symmetric(vertical: 4), child: LaneLine(vertical: true, dash: 10, gap: 8, thickness: 3))),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(children: [
+                    for (final e in r.timeline.reversed.take(12))
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 7),
+                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Expanded(child: Text(_event(e), style: const TextStyle(fontWeight: FontWeight.w600, height: 1.3))),
+                          Text(ago(DateTime.tryParse('${e['at']}')?.toLocal() ?? DateTime.now()), style: const TextStyle(color: muted, fontSize: 12)),
+                        ]),
+                      ),
+                    if (r.timeline.isEmpty) const Align(alignment: Alignment.centerLeft, child: Text('No updates yet.', style: TextStyle(color: muted))),
                   ]),
                 ),
-              if (r.timeline.isEmpty) const Text('No updates yet.'),
-            ])),
-        const SizedBox(height: 18),
-        SizedBox(
-            width: double.infinity,
-            child: BigButton(voting ? 'Adding…' : 'I see this too${count > 1 ? '  ($count)' : ''}', icon: Icons.people_outline, onTap: voting ? null : _vote)),
-        const SizedBox(height: 24),
+              ]),
+            ),
+            const SizedBox(height: 26),
+            SizedBox(width: double.infinity, child: BigButton(voting ? 'Adding…' : (count > 1 ? 'I see this too ($count)' : 'I see this too'), icon: Icons.people_outline, onTap: voting ? null : _vote)),
+          ]),
+        ),
       ]),
     );
   }
@@ -127,21 +159,4 @@ class _BodyState extends State<_Body> {
       _ => ev.replaceAll('_', ' '),
     };
   }
-}
-
-class _Section extends StatelessWidget {
-  const _Section(this.title, this.child);
-  final String title;
-  final Widget child;
-  @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
-          const SizedBox(height: 10),
-          child,
-        ]),
-      );
 }

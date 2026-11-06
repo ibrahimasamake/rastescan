@@ -16,11 +16,11 @@ class ImpactPage extends StatelessWidget {
           Widget tile(String v, String l, {Color? c}) => Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+                  decoration: BoxDecoration(color: paper, borderRadius: BorderRadius.circular(18)),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(v, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -.8, color: c)),
+                    Text(v, style: display(38, color: c ?? navy, h: 1)),
                     const SizedBox(height: 2),
-                    Text(l, style: const TextStyle(color: Colors.black54, fontSize: 12.5)),
+                    Text(l, style: const TextStyle(color: muted, fontSize: 12.5)),
                   ]),
                 ),
               );
@@ -33,12 +33,12 @@ class ImpactPage extends StatelessWidget {
               const SizedBox(height: 12),
               Row(children: [tile('${i.fixed}/${i.tickets}', 'tickets fixed'), const SizedBox(width: 12), tile(i.onTime == null ? '–' : '${i.onTime!.round()}%', 'fixed on time')]),
               const SizedBox(height: 18),
-              const Text('Last 14 days', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+              Text('Last 14 days', style: display(30)),
               const SizedBox(height: 10),
               Container(
                 height: 140,
                 padding: const EdgeInsets.fromLTRB(12, 16, 12, 10),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+                decoration: BoxDecoration(color: paper, borderRadius: BorderRadius.circular(18)),
                 child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   for (final t in i.trend)
                     Expanded(
@@ -55,11 +55,11 @@ class ImpactPage extends StatelessWidget {
                 ]),
               ),
               const SizedBox(height: 18),
-              const Text('What is being reported', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+              Text('What is being reported', style: display(30)),
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+                decoration: BoxDecoration(color: paper, borderRadius: BorderRadius.circular(18)),
                 child: Column(children: [
                   for (final h in i.byHazard)
                     Padding(
@@ -75,17 +75,17 @@ class ImpactPage extends StatelessWidget {
                 ]),
               ),
               const SizedBox(height: 18),
-              const Text('Hotspots', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+              Text('Hotspots', style: display(30)),
               const SizedBox(height: 10),
               for (final h in i.hotspots.take(6))
                 Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                  decoration: BoxDecoration(color: paper, borderRadius: BorderRadius.circular(16)),
                   child: Row(children: [
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('${h['name']}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                      Text('${h['open']} open · ${h['critical']} critical', style: const TextStyle(color: Colors.black54, fontSize: 12.5)),
+                      Text('${h['open']} open · ${h['critical']} critical', style: const TextStyle(color: muted, fontSize: 12.5)),
                     ])),
                     Text(inr((h['cost_inr'] ?? 0) as num), style: const TextStyle(fontWeight: FontWeight.w800)),
                   ]),
