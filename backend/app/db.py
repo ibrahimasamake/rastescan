@@ -92,6 +92,10 @@ MIGRATIONS: list[list[str]] = [
         "CREATE INDEX IF NOT EXISTS reports_hazard ON reports(hazard_type)",
         "CREATE INDEX IF NOT EXISTS comments_report ON comments(report_id)",
     ],
+    # PIN code, state and road for a location, so each one is only looked up once
+    [
+        "CREATE TABLE IF NOT EXISTS address_cache (location TEXT PRIMARY KEY, address_json TEXT NOT NULL, created_at TEXT NOT NULL)",
+    ],
 ]
 
 

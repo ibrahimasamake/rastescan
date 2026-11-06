@@ -71,13 +71,11 @@ export default function ReportPage() {
   const { t, num, date } = useI18n();
   const { data: r, error, loading, reload, setData } = useAsync(() => api.report(code), [code], 30000);
   const [addr, setAddr] = useState<Address | null>(null);
-  const lat = r?.lat ?? null, lng = r?.lng ?? null;
   useEffect(() => {
-    if (lat === null || lng === null) return;
     let live = true;
-    lookupAddress(lat, lng).then((a) => { if (live) setAddr(a); });
+    lookupAddress(code).then((a) => { if (live) setAddr(a); });
     return () => { live = false; };
-  }, [lat, lng]);
+  }, [code]);
 
   if (loading && !r) {
     return (

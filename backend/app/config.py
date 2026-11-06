@@ -47,6 +47,8 @@ class Settings:
     site_name: str = field(default_factory=lambda: _env("SITE_NAME", "Municipal Road Services"))
     public_base_url: str = field(default_factory=lambda: _env("PUBLIC_BASE_URL").rstrip("/"))
     timezone: str = field(default_factory=lambda: _env("TIMEZONE", "Asia/Kolkata"))
+    # Finds the PIN code and state for a report's pin (OpenStreetMap Nominatim). Empty switches the lookup off.
+    geocode_url: str = field(default_factory=lambda: _env("GEOCODE_URL", "https://nominatim.openstreetmap.org/reverse"))
     # Officer accounts. The admin is created on first start if no officer exists yet.
     admin_email: str = field(default_factory=lambda: _env("ADMIN_EMAIL"))
     admin_password: str = field(default_factory=lambda: _env("ADMIN_PASSWORD"))

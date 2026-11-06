@@ -145,7 +145,7 @@ def test_old_database_upgrades_in_place(tmp_path):
     conn.commit()
     conn.close()
     db = Database(tmp_path / "old.db")
-    assert db.version == 1
+    assert db.version == 2
     row = db.one("SELECT code, ward_code, is_demo FROM reports")
     assert row == {"code": "RS-0001", "ward_code": None, "is_demo": 0}
     Database(tmp_path / "old.db")  # second open is a no-op

@@ -130,6 +130,15 @@ def get_report(code: str, request: Request, ctx: Ctx = Depends(get_ctx)):
     return cached_json(request, svc.public_detail(ctx, row), max_age=15)
 
 
+@router.get("/reports/{code}/address")
+def get_address(code: str, request: Request, ctx: Ctx = Depends(get_ctx)):
+    row = svc.row_by_code(ctx, code)
+    if row["status"] not in svc.PUBLIC_INTERNAL:
+        raise HTTPException(404, f"Report {code.upper()} is waiting for a check and is not public yet.")
+    found = svc.address(ctx, row)
+    return cached_json(request, found or {}, max_age=3600 if found else 30)
+
+
 class Vote(BaseModel):
     device_id: str = Field(min_length=8, max_length=100)
 

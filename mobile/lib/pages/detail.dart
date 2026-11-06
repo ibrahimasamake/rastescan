@@ -164,12 +164,20 @@ class _BodyState extends State<_Body> {
 }
 
 /// Where the damage is, and the dates that matter: what an official asks first.
-class _LocationFacts extends StatelessWidget {
+class _LocationFacts extends StatefulWidget {
   const _LocationFacts(this.r);
   final Report r;
+  @override
+  State<_LocationFacts> createState() => _LocationFactsState();
+}
+
+class _LocationFactsState extends State<_LocationFacts> {
+  // Kept here so a rebuild does not ask again.
+  late final Future<Address?> _address = Api.instance.address(widget.r.code);
 
   @override
   Widget build(BuildContext context) {
+    final r = widget.r;
     final lat = r.lat, lng = r.lng;
     Widget row(String k, String? v, {bool strong = false}) => v == null || v.isEmpty
         ? const SizedBox.shrink()
@@ -190,7 +198,7 @@ class _LocationFacts extends StatelessWidget {
       Text('Location and details', style: display(28)),
       const SizedBox(height: 6),
       FutureBuilder<Address?>(
-        future: lat == null || lng == null ? Future.value(null) : Api.instance.address(lat, lng),
+        future: _address,
         builder: (_, s) {
           final a = s.data;
           return Column(children: [

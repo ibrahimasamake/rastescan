@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 
-from . import costing, triage
+from . import costing, geocode, triage
 from .config import Settings
 from .db import Database
 from .inspector import Inspector, InspectionError, InspectorBusy, _why
@@ -229,6 +229,22 @@ def citizen_item(ctx: Ctx, row: dict) -> dict:
 
 
 # ---------- writes ----------
+def address(ctx: Ctx, row: dict) -> dict | None:
+    """The nearest known address to a report's pin. It is reference data about a place, not a change to the report, so it has no
+    audit entry. Answers are kept per location; a failed lookup is not kept, so the next reader tries again."""
+    if row["lat"] is None or row["lng"] is None or not ctx.settings.geocode_url:
+        return None
+    location = f"{row['lat']:.5f},{row['lng']:.5f}"
+    known = ctx.db.one("SELECT address_json FROM address_cache WHERE location = ?", (location,))
+    if known:
+        return json.loads(known["address_json"])
+    found = geocode.reverse(ctx.settings.geocode_url, row["lat"], row["lng"])
+    if found:
+        ctx.db.execute("INSERT OR REPLACE INTO address_cache (location, address_json, created_at) VALUES (?, ?, ?)",
+                       (location, json.dumps(found), iso(now())))
+    return found
+
+
 def set_status(ctx: Ctx, row: dict, status: str, actor: str, officer_id: int | None = None,
                detail: dict | None = None, event: str = "status") -> None:
     ts = now()

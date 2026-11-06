@@ -134,8 +134,7 @@ class Activity {
   DateTime get at => DateTime.tryParse('${j['at']}')?.toLocal() ?? DateTime.now();
 }
 
-/// PIN code, state and road for a report's pin, from OpenStreetMap's address lookup. Reports only store coordinates,
-/// so this is the nearest known address to the pin.
+/// PIN code, state and road for a report's pin: the nearest known address to it, from the server.
 class Address {
   Address(this.road, this.area, this.city, this.district, this.state, this.pin);
   final String? road, area, city, district, state, pin;
@@ -193,32 +192,17 @@ class Api {
     throw ApiError(msg, res.statusCode);
   }
 
-  final Map<String, Address?> _addresses = {};
+  final Map<String, Address> _addresses = {};
 
-  Future<Address?> address(double lat, double lng) async {
-    final key = '${lat.toStringAsFixed(5)},${lng.toStringAsFixed(5)}';
-    if (_addresses.containsKey(key)) return _addresses[key];
+  /// The server looks this up once per location and keeps it, so phones never contact the address service themselves.
+  Future<Address?> address(String code) async {
+    final kept = _addresses[code];
+    if (kept != null) return kept;
     try {
-      final uri = Uri.https('nominatim.openstreetmap.org', '/reverse', {'format': 'jsonv2', 'zoom': '18', 'addressdetails': '1', 'accept-language': 'en', 'lat': '$lat', 'lon': '$lng'});
-      final res = await _c.get(uri, headers: {'User-Agent': 'RasteScan/1.0 (road repair portal)'}).timeout(const Duration(seconds: 12));
-      if (res.statusCode != 200) return null;
-      final j = jsonDecode(utf8.decode(res.bodyBytes))['address'];
-      if (j is! Map) return null;
-      String? pick(List<String> keys) {
-        for (final k in keys) {
-          if (j[k] != null) return '${j[k]}';
-        }
-        return null;
-      }
-
-      return _addresses[key] = Address(
-        pick(['road']),
-        pick(['suburb', 'neighbourhood', 'village', 'hamlet', 'quarter']),
-        pick(['city', 'town', 'municipality']),
-        pick(['state_district', 'county', 'city_district']),
-        pick(['state', 'territory']),
-        pick(['postcode']),
-      );
+      final j = await _get('/api/public/reports/$code/address');
+      if (j is! Map || j['state'] == null) return null;
+      String? f(String k) => j[k] as String?;
+      return _addresses[code] = Address(f('road'), f('area'), f('city'), f('district'), f('state'), f('pin'));
     } catch (_) {
       return null;
     }
