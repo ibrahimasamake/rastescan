@@ -13,7 +13,7 @@ city works one ranked repair queue, and anyone can check every step, from the re
 [What is not proved yet](#where-it-stands)
 
 **Best Socially Relevant Project** at the TechKubik National Level Project Expo 2026, HKBK College of Engineering, Bengaluru,
-with a cash prize. Built by Aaditi Varsha, Chaitanya, Ibrahima and Vishnu, MCA students at CMR University.
+with a cash prize. Built by Aditi Varsha, Chaitanya, Ibrahima and Vishnu, MCA students at CMR University.
 
 ## Why it exists
 
